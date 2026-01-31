@@ -23,6 +23,18 @@
     <Compile Update="Graphics2D\UI\File\FileDialog.Util.cs">
       <DependentUpon>FileDialog.cs</DependentUpon>
     </Compile>
+    <Compile Update="Graphics2D\UI\Properties\PropertyGrid.SubGrid.cs">
+      <DependentUpon>PropertyGrid.cs</DependentUpon>
+    </Compile>
+    <Compile Update="Graphics2D\UI\Properties\FieldRecord.cs">
+      <DependentUpon>Record.cs</DependentUpon>
+    </Compile>
+    <Compile Update="Graphics2D\UI\Properties\AttachedPropertyRecord.cs">
+      <DependentUpon>Record.cs</DependentUpon>
+    </Compile>
+    <Compile Update="Graphics2D\UI\Properties\PropertyRecord.cs">
+      <DependentUpon>Record.cs</DependentUpon>
+    </Compile>
   </ItemGroup>
 
   <ItemGroup>
