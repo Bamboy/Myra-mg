@@ -1,67 +1,73 @@
 using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 
 namespace Myra.Graphics2D.UI.Properties
 {
+    /// <summary>
+    /// Attribute that ties a concrete <see cref="PropertyEditor"/> to one or more property types.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
+    public class PropertyEditorAttribute : Attribute
+    {
+        private readonly Type attached;
+        private readonly Type[] editTypes;
+        
+        public PropertyEditorAttribute(Type attached, params Type[] editTypes)
+        {
+            this.attached = attached;
+            this.editTypes = editTypes;
+        }
+        public EditorTypeRegistry GetRegistry() => new EditorTypeRegistry(attached, editTypes);
+    }
+    
     /// <summary>
     /// Encapsulates a widget and .Net property or field, for the purposes of display or editing by the user.
     /// </summary>
     public abstract class PropertyEditor : IRecord
     {
-        //public static readonly Dictionary<>
-        static PropertyEditor()
-        {
-            
-        }
+        protected delegate bool WidgetCreatorDelegate(out Widget widget);
         
-        protected readonly IInspector Owner;
-        public readonly Record Record;
-        //TODO cache attributes ?
+        protected readonly IInspector _owner;
+        protected readonly Record _record;
         
         public Widget Widget { get; protected set; }
         
-        protected PropertyEditor(IInspector owner, Record record)
+        /// <summary>
+        /// Creates a new widget attached to the given Record
+        /// </summary>
+        protected PropertyEditor(IInspector owner, Record methodInfo)
         {
-            Owner = owner;
-            Record = record;
+            _owner = owner;
+            _record = methodInfo;
             if (TryCreateWidget(out Widget editor))
-            {
                 Widget = editor;
-            }
-            else
-            {
-                throw new Exception();
-            }
         }
 
-        protected bool TryCreateWidget(out Widget widget)
-        {
-            var atts = Record.FindAttributes<Attribute>();
-            return TryCreateEditorWidget(Record, out widget, atts);
-        }
-        protected abstract bool TryCreateEditorWidget(Record record, out Widget widget, params Attribute[] attributes);
+        private bool TryCreateWidget(out Widget widget) => TryCreateEditorWidget(out widget);
+        protected abstract bool TryCreateEditorWidget(out Widget widget);
         
-        Type IRecord.Type => Record.Type;
-        object IRecord.GetValue(object field) => Record.GetValue(field);
-        void IRecord.SetValue(object field, object value) => Record.SetValue(field, value);
+        public Type Type => _record.Type;
+        object IRecord.GetValue(object field) => _record.GetValue(field);
+        public void SetValue(object field, object value)
+        {
+            _record.SetValue(field, value);
+            _owner.FireChanged(_record.Name);
+        }
     }
     
     /// <inheritdoc cref="PropertyEditor"/>
     public abstract class PropertyEditor<T> : PropertyEditor, IRecord<T>
     {
-        protected delegate bool WidgetCreatorDelegate(Record record, out Widget widget);
-        protected abstract bool CreatorPicker(in Attribute[] attributes, out WidgetCreatorDelegate creatorDelegate);
+        protected abstract bool CreatorPicker(out WidgetCreatorDelegate creatorDelegate);
         
-        protected override bool TryCreateEditorWidget(Record record, out Widget widget, params Attribute[] attributes)
+        protected override bool TryCreateEditorWidget(out Widget widget)
         {
-            if (CreatorPicker(attributes, out var func))
-                return func.Invoke(record, out widget);
+            if (CreatorPicker(out var func))
+                return func.Invoke(out widget);
             widget = null;
             return false;
         }
         
-        protected PropertyEditor(IInspector owner, Record record) : base(owner, record)
+        protected PropertyEditor(IInspector owner, Record methodInfo) : base(owner, methodInfo)
         {
             
         }
@@ -71,7 +77,7 @@ namespace Myra.Graphics2D.UI.Properties
         /// </summary>
         public virtual T GetValue(object field)
         {
-            object o = Record.GetValue(field);
+            object o = _record.GetValue(field);
             if (o is T ot)
                 return ot;
             return default;
@@ -81,48 +87,8 @@ namespace Myra.Graphics2D.UI.Properties
         /// </summary>
         public virtual void SetValue(object field, T value)
         {
-            Record.SetValue(field, value);
-        }
-    }
-
-    public sealed class BooleanEditor : PropertyEditor<bool>
-    {
-        public BooleanEditor(IInspector owner, Record record) : base(owner, record)
-        {
-            
-        }
-        
-        protected override bool CreatorPicker(in Attribute[] attributes, out WidgetCreatorDelegate creatorDelegate)
-        {
-            creatorDelegate = CreateCheckBox;
-            return true;
-        }
-
-        private bool CreateCheckBox(Record record, out Widget widget)
-        {
-            var propertyType = record.Type;
-            bool value = GetValue(Owner.SelectedField);
-            
-            var cb = new CheckButton
-            {
-                IsChecked = value
-            };
-            
-            if (Record.HasSetter)
-            {
-                cb.Click += (sender, args) =>
-                {
-                    SetValue(Owner.SelectedField, cb.IsChecked);
-                    Owner.FireChanged(propertyType.Name);
-                };
-            }
-            else
-            {
-                cb.Enabled = false;
-            }
-
-            widget = cb;
-            return true;
+            _record.SetValue(field, value);
+            _owner.FireChanged(_record.Name);
         }
     }
 }

@@ -35,6 +35,27 @@
     <Compile Update="Graphics2D\UI\Properties\PropertyRecord.cs">
       <DependentUpon>Record.cs</DependentUpon>
     </Compile>
+    <Compile Update="Graphics2D\UI\Properties\NumericPropertyEditor.cs">
+      <DependentUpon>PropertyEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Update="Graphics2D\UI\Properties\EnumPropertyEditor.cs">
+      <DependentUpon>PropertyEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Update="Graphics2D\UI\Properties\StringPropertyEditor.cs">
+      <DependentUpon>PropertyEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Update="Graphics2D\UI\Properties\ColorPropertyEditor.cs">
+      <DependentUpon>PropertyEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Update="Graphics2D\UI\Properties\BooleanPropertyEditor.cs">
+      <DependentUpon>PropertyEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Update="Graphics2D\UI\Properties\BrushPropertyEditor.cs">
+      <DependentUpon>PropertyEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Update="Graphics2D\UI\Properties\CollectionPropertyEditor.cs">
+      <DependentUpon>PropertyEditor.cs</DependentUpon>
+    </Compile>
   </ItemGroup>
 
   <ItemGroup>

@@ -245,10 +245,11 @@ namespace Myra.Graphics2D.UI.Properties
 		{
 		}
 		
-		object IInspector.SelectedField
-		{
-			get => _selected;
-		}
+		object IInspector.SelectedField => _object;
+		/// <inheritdoc />
+		string IInspector.BasePath => Settings.BasePath;
+		
+		AssetManager IInspector.AssetManager => Settings.AssetManager;
 
 		void IInspector.FireChanged(string name)
 		{
@@ -266,12 +267,7 @@ namespace Myra.Graphics2D.UI.Properties
 				ev(this, new GenericEventArgs<string>(name));
 			}
 		}
-
-		private static void UpdateLabelCount(Label textBlock, int count)
-		{
-			textBlock.Text = string.Format("{0} Items", count);
-		}
-
+		
 		private void SetValue(Record record, object obj, object value)
 		{
 			if (CustomSetter != null && CustomSetter(record, obj, value))
@@ -279,7 +275,7 @@ namespace Myra.Graphics2D.UI.Properties
 
 			record.SetValue(obj, value);
 		}
-
+/*
 		private ComboView CreateCustomValuesEditor(Record record, CustomValues customValues, bool hasSetter)
 		{
 			var propertyType = record.Type;
@@ -990,7 +986,7 @@ namespace Myra.Graphics2D.UI.Properties
 
 			return result;
 		}
-
+*/
 		private void FillSubGrid(ref int y, IReadOnlyList<Record> records)
 		{
 			for (var i = 0; i < records.Count; ++i)
@@ -1014,6 +1010,14 @@ namespace Myra.Graphics2D.UI.Properties
 				CustomValues customValues = null;
 
 				var needsSubGrid = false;
+
+				var editor = Editors.Create(this, record);
+				if (editor != null)
+				{
+					valueWidget = editor.Widget;
+				}
+				
+				/*
 				if ((valueWidget = CustomWidgetProvider?.Invoke(record, _object)) != null)
 				{
 
@@ -1110,8 +1114,9 @@ namespace Myra.Graphics2D.UI.Properties
 						needsSubGrid = true;
 					}
 				}
-
-				if (valueWidget != null)
+				*/
+				
+				if (valueWidget != null) //Add single value display
 				{
 					var name = record.Name;
 					var dn = record.FindAttribute<DisplayNameAttribute>();
