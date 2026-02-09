@@ -9,88 +9,69 @@ namespace Myra.Graphics2D.UI.Properties
 {
     internal static class Editors
     {
-        private static readonly Type[] ActivatorTypeArgs = { typeof(IInspector), typeof(Record) };
-        private static ReadOnlyCollection<EditorTypeRegistry> EditorRegistry;
+        private static ReadOnlyCollection<EditorTypeRegistry> _registry;
         private static bool _init;
-        public static PropertyEditor Create(IInspector inspector, Record methodInfo)
-        {
-            if (TryGetEditorTypeForType(methodInfo.Type, out Type editorType))
-            {
-                var ctor = editorType.GetConstructor(ActivatorTypeArgs);
-                if (ctor != null)
-                {
-                    try
-                    {
-                        //This also creates the widget
-                        object obj = Activator.CreateInstance(editorType, inspector, methodInfo);
-                        return obj as PropertyEditor;
-                    }
-                    catch (Exception e)
-                    {
-                        throw e;
-                    }
-                }
-            }
-            else
-            {
-                Console.WriteLine("Could not find property editor for type: "+methodInfo.Type);
-            }
-            return null;
-        }
         
         internal static bool TryGetEditorTypeForType(Type propertyKind, out Type editorType)
         {
             if (!_init)
                 InitializeRegistry();
 
-            string nice = propertyKind.GetFriendlyName();
-            for (int i = 0; i < EditorRegistry.Count; i++)
+            string str = EditorTypeRegistry.TypeToString(propertyKind);
+            for (int i = 0; i < _registry.Count; i++)
             {
-                if (EditorRegistry[i].CanEditType(nice))
+                if (_registry[i].CanEditType(str))
                 {
-                    editorType = EditorRegistry[i].EditorType;
+                    editorType = _registry[i].EditorType;
                     return true;
                 }
             }
+            
+            for (int i = 0; i < _registry.Count; i++)
+            {
+                if (_registry[i].CanEditType(propertyKind))
+                {
+                    editorType = _registry[i].EditorType;
+                    return true;
+                }
+            }
+            //typeof(IList).IsAssignableFrom(propertyKind)
             editorType = null;
             return false;
         }
         
-        public static void InitializeRegistry(params Assembly[] fromAssemblies)
+        /// <inheritdoc cref="PropertyEditor.InitializeRegistry"/>
+        internal static void InitializeRegistry(int predictedCount = 16, params Assembly[] fromAssemblies)
         {
-            List<Assembly> scanAsm;
+            Assembly[] scanAsm;
             if (fromAssemblies == null || fromAssemblies.Length <= 0)
-                scanAsm = new List<Assembly> { typeof(Editors).Assembly, Assembly.GetEntryAssembly() };
+                scanAsm = AppDomain.CurrentDomain.GetAssemblies(); //this scans way more assemblies than needed, but works
             else
             {
-                scanAsm = new List<Assembly>(fromAssemblies);
-                scanAsm.Add(typeof(Editors).Assembly);
-                scanAsm.Add(Assembly.GetEntryAssembly());
+                scanAsm = fromAssemblies;
+                if(!fromAssemblies.Contains(typeof(Editors).Assembly))
+                    Console.WriteLine("PropertyEditor.InitializeRegistry() warning: Myra's Assembly was not included.");
+                //maybe ensure fromAssemblies contains Myra (this) assembly?
             }
             
-            Reflective_LoadTypeRegistry<PropertyEditor>(
-                16,
-                scanAsm,
-                out List<EditorTypeRegistry> registry
-            );
+            Reflective_LoadTypeRegistry(predictedCount, scanAsm, out List<EditorTypeRegistry> registry);
 
-            EditorRegistry = registry.AsReadOnly();
+            _registry = registry.AsReadOnly();
             _init = true;
         }
         
         /// <summary>
-        /// Creates all concrete classes that inherit the type, from the specified assemblies. Only creates types with no-argument constructors.
+        /// Generate <see cref="EditorTypeRegistry"/> objects for each concrete <see cref="PropertyEditor"/> implementation found.
+        /// That implementation must also have a <see cref="PropertyEditorAttribute"/>.
         /// </summary>
-        /// <typeparam name="T">The base abstract type</typeparam>
-        /// <param name="assemblies">The assemblies to scan for inheritors</param>
-        private static void Reflective_LoadTypeRegistry<T>(int predictedCount, IEnumerable<Assembly> assemblies, out List<EditorTypeRegistry> registry) where T : class
+        private static void Reflective_LoadTypeRegistry(int predictedCount, IEnumerable<Assembly> assemblies, out List<EditorTypeRegistry> registry)
         {
             registry = new List<EditorTypeRegistry>(predictedCount);
             foreach (Assembly asm in assemblies)
             {
-                // LoadAttributesFromConcreteSubTypes<T>(asm, results);
+
                 foreach (Type type in asm.GetTypes()
-                    .Where(myType => myType.IsClass && !myType.IsAbstract && myType.IsSubclassOf(typeof(T))))
+                    .Where(myType => myType.IsClass && !myType.IsAbstract && myType.IsSubclassOf(typeof(PropertyEditor)) ))
                 {
                     PropertyEditorAttribute att = type.FindAttribute<PropertyEditorAttribute>();
                     if (att == null)

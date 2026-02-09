@@ -39,13 +39,15 @@ namespace Myra.Graphics2D.UI.Properties
 		private readonly PropertyGrid _parentGrid;
 		private Record _parentProperty;
 		private readonly Dictionary<string, List<Record>> _records = new Dictionary<string, List<Record>>();
+		private List<Record> _recMemory = new List<Record>(32);
 		private readonly HashSet<string> _expandedCategories = new HashSet<string>();
 		private object _object;
 		private bool _ignoreCollections;
+		private bool _doFancyLayout = true;
 		private readonly PropertyGridSettings _settings = new PropertyGridSettings();
 		private string _filter;
 		private Type _parentType;
-
+		
 		[Browsable(false)]
 		[XmlIgnore]
 		public TreeStyle PropertyGridStyle { get; private set; }
@@ -80,17 +82,10 @@ namespace Myra.Graphics2D.UI.Properties
 			get
 			{
 				if (_parentGrid != null)
-				{
 					return _parentGrid.ParentType;
-				}
-
 				return _parentType;
 			}
-
-			set
-			{
-				_parentType = value;
-			}
+			set => _parentType = value;
 		}
 
 		[Browsable(false)]
@@ -104,28 +99,37 @@ namespace Myra.Graphics2D.UI.Properties
 			get
 			{
 				if (_parentGrid != null)
-				{
 					return _parentGrid.IgnoreCollections;
-				}
-
 				return _ignoreCollections;
 			}
+			set => _ignoreCollections = value;
+		}
 
+		[Category("Behavior")]
+		[DefaultValue(true)]
+		public bool DoFancyLayout
+		{
+			get
+			{
+				if (_parentGrid != null)
+					return _parentGrid.DoFancyLayout;
+				return _doFancyLayout;
+			}
 			set
 			{
-				_ignoreCollections = value;
+				if (_parentGrid != null)
+					return;
+				if (_doFancyLayout != value)
+				{
+					_doFancyLayout = value;
+					Rebuild();
+				}
 			}
 		}
 
 		[Browsable(false)]
 		[XmlIgnore]
-		public bool IsEmpty
-		{
-			get
-			{
-				return Children.Count == 0;
-			}
-		}
+		public bool IsEmpty => Children.Count == 0;
 
 		[Browsable(false)]
 		[XmlIgnore]
@@ -270,7 +274,7 @@ namespace Myra.Graphics2D.UI.Properties
 		
 		private void SetValue(Record record, object obj, object value)
 		{
-			if (CustomSetter != null && CustomSetter(record, obj, value))
+			if (CustomSetter != null && CustomSetter(record, obj, value)) //TODO reimplement custom setter
 				return;
 
 			record.SetValue(obj, value);
@@ -1010,9 +1014,8 @@ namespace Myra.Graphics2D.UI.Properties
 				CustomValues customValues = null;
 
 				var needsSubGrid = false;
-
-				var editor = Editors.Create(this, record);
-				if (editor != null)
+				
+				if (PropertyEditor.TryCreate(this, record, out PropertyEditor editor))
 				{
 					valueWidget = editor.Widget;
 				}
@@ -1177,7 +1180,7 @@ namespace Myra.Graphics2D.UI.Properties
 				}
 			}
 		}
-
+		
 		public bool PassesFilter(string name)
 		{
 			if (string.IsNullOrEmpty(Filter) || string.IsNullOrEmpty(name))
@@ -1195,102 +1198,13 @@ namespace Myra.Graphics2D.UI.Properties
 			_records.Clear();
 			_expandedCategories.Clear();
 
-			if (_object == null)
-			{
+			if(!RecordAggregator(in _object, in _parentType, _recMemory, _doFancyLayout))
 				return;
-			}
-
-			// Properties
-			var properties = from p in _object.GetType().GetProperties() select p;
-			var records = new List<Record>();
-			foreach (var property in properties)
-			{
-				if (property.GetGetMethod() == null ||
-					!property.GetGetMethod().IsPublic ||
-					property.GetGetMethod().IsStatic)
-				{
-					continue;
-				}
-
-				var hasSetter = property.GetSetMethod() != null &&
-								property.GetSetMethod().IsPublic;
-
-				var browsableAttr = property.FindAttribute<BrowsableAttribute>();
-				if (browsableAttr != null && !browsableAttr.Browsable)
-				{
-					continue;
-				}
-
-				var readOnlyAttr = property.FindAttribute<ReadOnlyAttribute>();
-				if (readOnlyAttr != null && readOnlyAttr.IsReadOnly)
-				{
-					hasSetter = false;
-				}
-
-				var record = new PropertyRecord(property)
-				{
-					HasSetter = hasSetter
-				};
-
-				var categoryAttr = property.FindAttribute<CategoryAttribute>();
-				record.Category = categoryAttr != null ? categoryAttr.Category : DefaultCategoryName;
-
-				records.Add(record);
-			}
-
-			// Fields
-			var fields = from f in _object.GetType().GetFields() select f;
-			foreach (var field in fields)
-			{
-				if (!field.IsPublic || field.IsStatic)
-				{
-					continue;
-				}
-
-				var browsableAttr = field.FindAttribute<BrowsableAttribute>();
-				if (browsableAttr != null && !browsableAttr.Browsable)
-				{
-					continue;
-				}
-
-				var categoryAttr = field.FindAttribute<CategoryAttribute>();
-
-				var hasSetter = true;
-				var readOnlyAttr = field.FindAttribute<ReadOnlyAttribute>();
-				if (readOnlyAttr != null && readOnlyAttr.IsReadOnly)
-				{
-					hasSetter = false;
-				}
-
-				var record = new FieldRecord(field)
-				{
-					HasSetter = hasSetter,
-					Category = categoryAttr != null ? categoryAttr.Category : DefaultCategoryName
-				};
-
-				records.Add(record);
-			}
-
-			// Attached properties
-			var asWidget = _object as Widget;
-			if (asWidget != null && ParentType != null)
-			{
-				var attachedProperties = AttachedPropertiesRegistry.GetPropertiesOfType(ParentType);
-				foreach (var attachedProperty in attachedProperties)
-				{
-					var record = new AttachedPropertyRecord(attachedProperty)
-					{
-						Category = attachedProperty.OwnerType.Name
-					};
-
-					records.Add(record);
-				}
-			}
-
+			
 			// Sort by categories
-			for (var i = 0; i < records.Count; ++i)
+			for (var i = 0; i < _recMemory.Count; ++i)
 			{
-				var record = records[i];
+				var record = _recMemory[i];
 
 				List<Record> categoryRecords;
 				if (!_records.TryGetValue(record.Category, out categoryRecords))
@@ -1302,10 +1216,13 @@ namespace Myra.Graphics2D.UI.Properties
 				categoryRecords.Add(record);
 			}
 
-			// Sort by names within categories
-			foreach (var category in _records)
+			if (_doFancyLayout)
 			{
-				category.Value.Sort((a, b) => Comparer<string>.Default.Compare(a.Name, b.Name));
+				// Sort by names within categories
+				foreach (var category in _records)
+				{
+					category.Value.Sort((a, b) => Comparer<string>.Default.Compare(a.Name, b.Name));
+				}
 			}
 
 			var ordered = _records.OrderBy(key => key.Key);
@@ -1350,6 +1267,108 @@ namespace Myra.Graphics2D.UI.Properties
 
 				y++;
 			}
+		}
+		
+		private static bool RecordAggregator(in object target, in Type parentType, List<Record> result, bool categorize = true)
+		{
+			result.Clear();
+			if (target == null)
+				return false;
+
+			Type targetType = target.GetType();
+			
+			// Properties
+			var properties = from p in targetType.GetProperties() select p;
+			foreach (var property in properties)
+			{
+				if (property.GetGetMethod() == null ||
+					!property.GetGetMethod().IsPublic ||
+					property.GetGetMethod().IsStatic)
+				{
+					continue;
+				}
+
+				var hasSetter = property.GetSetMethod() != null &&
+								property.GetSetMethod().IsPublic;
+
+				var browsableAttr = property.FindAttribute<BrowsableAttribute>();
+				if (browsableAttr != null && !browsableAttr.Browsable)
+				{
+					continue;
+				}
+
+				var readOnlyAttr = property.FindAttribute<ReadOnlyAttribute>();
+				if (readOnlyAttr != null && readOnlyAttr.IsReadOnly)
+				{
+					hasSetter = false;
+				}
+
+				var record = new PropertyRecord(property)
+				{
+					HasSetter = hasSetter
+				};
+				
+				var categoryAttr = property.FindAttribute<CategoryAttribute>();
+				record.Category = (categoryAttr != null & categorize) ? categoryAttr.Category : DefaultCategoryName;
+
+				result.Add(record);
+			}
+
+			// Fields
+			var fields = from f in targetType.GetFields() select f;
+			foreach (var field in fields)
+			{
+				if (!field.IsPublic || field.IsStatic)
+				{
+					continue;
+				}
+
+				var browsableAttr = field.FindAttribute<BrowsableAttribute>();
+				if (browsableAttr != null && !browsableAttr.Browsable)
+				{
+					continue;
+				}
+
+				var categoryAttr = field.FindAttribute<CategoryAttribute>();
+
+				var hasSetter = true;
+				var readOnlyAttr = field.FindAttribute<ReadOnlyAttribute>();
+				if (readOnlyAttr != null && readOnlyAttr.IsReadOnly)
+				{
+					hasSetter = false;
+				}
+
+				var record = new FieldRecord(field)
+				{
+					HasSetter = hasSetter,
+					Category = (categoryAttr != null & categorize) ? categoryAttr.Category : DefaultCategoryName
+				};
+
+				result.Add(record);
+			}
+
+			// Attached properties
+			var asWidget = target as Widget;
+			if (asWidget != null && parentType != null)
+			{
+				var attachedProperties = AttachedPropertiesRegistry.GetPropertiesOfType(parentType);
+				foreach (var attachedProperty in attachedProperties)
+				{
+					var record = new AttachedPropertyRecord(attachedProperty)
+					{
+						Category = attachedProperty.OwnerType.Name
+					};
+
+					result.Add(record);
+				}
+			}
+
+			return true;
+		}
+
+		private void RecordSorter(ref List<Record> collection)
+		{
+			
 		}
 
 		public void ApplyPropertyGridStyle(TreeStyle style)
