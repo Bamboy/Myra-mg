@@ -196,7 +196,7 @@ namespace AssetManagementBase
 					}
 
 					parts.Add(el.Attribute("Size").Value);
-					var fontSystem = manager.LoadFontSystem(fontFile, existingTexture: existingTexture, existingTextureUsedSpace: existingTextureUsedSpace);
+					var fontSystem = LoadFontSystem(manager, fontFile, existingTexture: existingTexture, existingTextureUsedSpace: existingTextureUsedSpace);
 					font = fontSystem.GetFont(float.Parse(el.Attribute("Size").Value));
 				}
 				else if (fontFile.EndsWith(".fnt"))
@@ -275,20 +275,31 @@ namespace AssetManagementBase
 			}
 			else if (assetName.Contains(".ttf"))
 			{
-
 				var parts = assetName.Split(':');
 				if (parts.Length < 2)
 				{
-					throw new Exception("Missing font size");
+					throw new ArgumentException("Missing font size");
 				}
 
-				var fontSize = int.Parse(parts[1].Trim());
-				var fontSystem = assetManager.LoadFontSystem(parts[0].Trim());
+				string fontPath = parts[0].Trim();
+				if (!int.TryParse(parts[1].Trim(), out int fontSize))
+				{
+					throw new ArgumentException($"Font size is not a number: '{parts[1]}'");
+				}
 
+				if (fontSize <= 0)
+					fontSize = 1;
+				
+				FontSystem fontSystem;
+#if PLATFORM_AGNOSTIC
+				fontSystem = LoadFontSystem(assetManager, fontPath);
+#else
+				fontSystem = XNAssetsExtFontStashSharp.LoadFontSystem(assetManager, fontPath);
+#endif
 				return fontSystem.GetFont(fontSize);
 			}
 
-			throw new Exception(string.Format("Can't load font '{0}'", assetName));
+			throw new ArgumentException(string.Format("Can't load font '{0}'", assetName));
 		}
 
 		public static Stylesheet LoadStylesheet(this AssetManager assetManager, string assetName) => assetManager.UseLoader(_stylesheetLoader, assetName);

@@ -13,29 +13,11 @@ namespace Myra.Graphics2D.UI.Properties
 		public string Category { get; set; }
 		public abstract string Name { get; }
 		public abstract Type Type { get; }
-		public abstract MemberInfo MemberInfo { get; }
+		public virtual MemberInfo MemberInfo { get; }
 
 		public abstract object GetValue(object field);
 		public abstract void SetValue(object field, object value);
 
-		public T FindAttribute<T>() where T : Attribute
-		{
-			if (MemberInfo == null)
-			{
-				return null;
-			}
-
-			return MemberInfo.FindAttribute<T>();
-		}
-
-		public T[] FindAttributes<T>() where T : Attribute
-		{
-			if (MemberInfo == null)
-			{
-				return null;
-			}
-
-			return MemberInfo.FindAttributes<T>();
-		}
+		public abstract T FindAttribute<T>() where T : Attribute;
 	}
 }

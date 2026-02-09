@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using MonoGame.Utilities;
 using Myra.Graphics2D.UI.Styles;
 using Myra.Utility;
 
@@ -31,7 +32,7 @@ namespace Myra.Graphics2D.UI.File
 				Path = path;
 				IsDrive = isDrive;
 			}
-            
+
 			public readonly string VolumeLabel;
 			public readonly string Label;
 			public readonly string Path;
@@ -39,7 +40,7 @@ namespace Myra.Graphics2D.UI.File
 		}
 
 		private const int ImageTextSpacing = 4;
-		
+
 		private readonly List<string> _paths = new List<string>();
 		private readonly List<string> _history = new List<string>();
 		private int _historyPosition;
@@ -112,7 +113,7 @@ namespace Myra.Graphics2D.UI.File
 
 		public bool AutoAddFilterExtension { get; set; }
 		public bool ShowHiddenFiles { get; set; }
-		
+
 		public IImage IconFolder { get; set; }
 		public IImage IconDrive { get; set; }
 
@@ -148,8 +149,8 @@ namespace Myra.Graphics2D.UI.File
 			_buttonBack.Background = null;
 			_buttonForward.Background = null;
 			_buttonParent.Background = null;
-			_listPlaces.Background = null; 
-			
+			_listPlaces.Background = null;
+
 			PopulatePlacesListUI(_listPlaces);
 
 			if (_listPlaces.Widgets.Count > 0) //Set starting folder
@@ -157,7 +158,7 @@ namespace Myra.Graphics2D.UI.File
 				var pathInfo = (PathInfo)_listPlaces.Widgets[0].Tag;
 				SetFolder(pathInfo.Path, false);
 			}
-			
+
 			_listPlaces.SelectedIndexChanged += OnPlacesSelectedIndexChanged;
 
 			_gridFiles.SelectedIndexChanged += OnGridFilesSelectedIndexChanged;
@@ -177,6 +178,13 @@ namespace Myra.Graphics2D.UI.File
 			SetStyle(Stylesheet.DefaultStyleName);
 		}
 
+		protected override void OnPlacedChanged()
+		{
+			base.OnPlacedChanged();
+
+			UpdateFolder();
+		}
+
 		/// <summary>
 		/// Create the navigation menu of places we can visit.
 		/// </summary>
@@ -184,21 +192,21 @@ namespace Myra.Graphics2D.UI.File
 		{
 			List<Location> placeList = new List<Location>(8);
 			int index = 0;
-			
+
 			//Add user directories
-			Platform.AppendUserPlacesOnSystem(placeList, Platform.SystemUserPlacePaths);
+			Platform.AppendUserPlacesOnSystem(placeList, Platform.SystemUserPlacePaths, _mode, ShowHiddenFiles);
 			for (; index < placeList.Count; index++)
-				listView.Widgets.Add( CreateListItem(placeList[index]) );
-			
+				listView.Widgets.Add(CreateListItem(placeList[index]));
+
 			if (_listPlaces.Widgets.Count > 0)
 				listView.Widgets.Add(new HorizontalSeparator());
-			
+
 			//Add file system drives
 			Platform.AppendDrivesOnSystem(placeList);
 			for (; index < placeList.Count; index++)
-				listView.Widgets.Add( CreateListItem(placeList[index]) );
+				listView.Widgets.Add(CreateListItem(placeList[index]));
 		}
-		
+
 		/// <summary>
 		/// Create a display widget for the given location
 		/// </summary>
@@ -210,10 +218,10 @@ namespace Myra.Graphics2D.UI.File
 				Tag = new PathInfo(location.Path, location.IsDrive)
 			};
 
-			string label = string.IsNullOrEmpty(location.VolumeLabel) 
-				? location.Label 
+			string label = string.IsNullOrEmpty(location.VolumeLabel)
+				? location.Label
 				: $"[{location.VolumeLabel}] {location.Label}";
-			
+
 			item.Widgets.Add(new Image());
 			item.Widgets.Add(new Label { Text = label });
 			return item;
@@ -226,37 +234,21 @@ namespace Myra.Graphics2D.UI.File
 		{
 			if (!Directory.Exists(path))
 				return false;
-			if (!TryGetFileAttributes(path, out FileAttributes att))
-				return false;
-			return FileAttributeFilter(att, _mode, ShowHiddenFiles);
-		}
-		
-		protected virtual bool FileAttributeFilter(FileAttributes attributes, FileDialogMode mode, bool showHidden)
-		{
-			bool discard =
-				attributes.HasFlag(FileAttributes.System)  |
-				attributes.HasFlag(FileAttributes.Offline) |
-				(attributes.HasFlag(FileAttributes.Hidden) & !showHidden);
-			
-			switch (mode)
+
+			// For Windows, existance check is enough
+			if (CurrentPlatform.OS == OS.Windows)
 			{
-				case FileDialogMode.SaveFile:
-					discard |= attributes.HasFlag(FileAttributes.ReadOnly);
-					break;
-				case FileDialogMode.ChooseFolder:
-					discard |= !attributes.HasFlag(FileAttributes.Directory);
-					break;
-				default:
-					break;
+				return true;
 			}
-			return !discard;
+
+			return CheckAccess(path, _mode, ShowHiddenFiles);
 		}
-		
+
 		protected void ShowIOError(string path, string exceptionMsg)
 		{
 			CreateMessageBox("I/O Error", exceptionMsg);
 		}
-		
+
 		private void UpdateEnabled()
 		{
 			var enabled = false;
@@ -401,9 +393,14 @@ namespace Myra.Graphics2D.UI.File
 			_paths.Clear();
 
 			_scrollPane.ScrollPosition = Mathematics.PointZero;
-			
+
+			if (Desktop == null)
+			{
+				return;
+			}
+
 			var path = _textFieldPath.Text;
-			
+
 			// Enumerate folders in directory
 			bool success = TryEnumerateDirectoryFolders(path, out IEnumerable<string> collection, out string exceptionMsg);
 			if (!success)
@@ -411,18 +408,17 @@ namespace Myra.Graphics2D.UI.File
 				ShowIOError(path, exceptionMsg);
 				return;
 			}
-			
+
 			var gridY = 0;
 			foreach (string folder in collection)
 			{
-				success = TryGetFileAttributes(folder, out FileAttributes att);
-				if (success)
-					success &= FileAttributeFilter(att, _mode, ShowHiddenFiles);
-				if (!success)
+				if (!CheckAccess(folder, _mode, ShowHiddenFiles))
+				{
 					continue;
-				
+				}
+
 				_gridFiles.RowsProportions.Add(new Proportion());
-				
+
 				var image = new Image
 				{
 					Renderable = IconFolder,
@@ -462,12 +458,11 @@ namespace Myra.Graphics2D.UI.File
 
 			foreach (string file in collection)
 			{
-				success = TryGetFileAttributes(file, out FileAttributes att);
-				if (success)
-					success &= FileAttributeFilter(att, _mode, ShowHiddenFiles);
-				if (!success)
+				if (!CheckAccess(file, _mode, ShowHiddenFiles))
+				{
 					continue;
-				
+				}
+
 				_gridFiles.RowsProportions.Add(new Proportion());
 
 				var name = new Label
@@ -567,7 +562,7 @@ namespace Myra.Graphics2D.UI.File
 				image.Renderable = pathInfo.IsDrive ? IconDrive : IconFolder;
 			}
 		}
-		
+
 		protected override void InternalSetStyle(Stylesheet stylesheet, string name)
 		{
 			ApplyFileDialogStyle(stylesheet.FileDialogStyles.SafelyGetStyle(name));
