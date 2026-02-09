@@ -1,10 +1,7 @@
 ﻿using Myra.Graphics2D.UI;
-using System;
-using System.Linq;
-using Myra.Graphics2D.UI.Styles;
-
 
 #if !STRIDE
+using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 #if ANDROID
@@ -25,7 +22,8 @@ namespace Myra.Samples.Inspector
 		private readonly GraphicsDeviceManager _graphics;
 #endif
 
-		private RootWidgets widgets;
+		private Input _input;
+		private RootWidgets _widgets;
 		private Desktop _desktop;
 		
 		public static InspectGame Instance { get; private set; }
@@ -40,7 +38,7 @@ namespace Myra.Samples.Inspector
 				PreferredBackBufferWidth = 1200,
 				PreferredBackBufferHeight = 800
 			};
-			Window.AllowUserResizing = true;
+			Window.AllowUserResizing = false;
 #else
 #endif
 
@@ -52,7 +50,7 @@ namespace Myra.Samples.Inspector
 		{
 			MyraEnvironment.Game = this;
 
-			_allWidgets = new Widgets();
+			_widgets = new RootWidgets();
 
 			_desktop = new Desktop();
 			_desktop.Widgets.Add(_allWidgets);
@@ -69,11 +67,17 @@ namespace Myra.Samples.Inspector
 
 //			Stylesheet.Current = DefaultAssets.DefaultStylesheet2X;
 
-			widgets = new RootWidgets();
+			_widgets = new RootWidgets();
 
 			_desktop = new Desktop();
-			_desktop.Root = widgets;
-
+			_desktop.Root = _widgets;
+			
+			_input = new Input(() => _widgets.inspectables.Count, () => _widgets.infos.Count)
+			{
+				OnSelectionChanged = (int i) => { _widgets.SetSelectedIndex(i); },
+				OnTextInfoChanged = (int i) => { _widgets.SetInfoIndex(i); },
+			};
+			
 #if MONOGAME && !ANDROID
 			// Inform Myra that external text input is available
 			// So it stops translating Keys to chars
@@ -87,58 +91,12 @@ namespace Myra.Samples.Inspector
 #endif
 		}
 #endif
-
-		private int selectedIndex = 0;
-		private bool lastDown, lastUp;
 		protected override void Update(GameTime gameTime)
 		{
 			base.Update(gameTime);
-			var state = Keyboard.GetState();
-			
-			// prevent spam cycling by only triggering an input change up or down once
-			bool thisDown = state[Keys.Down] == KeyState.Down;
-			bool thisUp = state[Keys.Up] == KeyState.Down;
-			if (thisDown & !lastDown)
-				CycleSelection(false);
-			else if(thisUp & !lastUp)
-				CycleSelection(true);
-			
-			lastDown = thisDown;
-			lastUp = thisUp;
-		}
-
-		private void CycleSelection(bool forward)
-		{
-			if (forward)
-			{
-				selectedIndex++;
-				if (selectedIndex >= widgets.inspectables.Count)
-					selectedIndex = 0;
-			}
-			else
-			{
-				selectedIndex--;
-				if (selectedIndex < 0)
-					selectedIndex = widgets.inspectables.Count - 1;
-			}
-			widgets.Inspect( widgets.inspectables[selectedIndex] );
+			_input.Update(Keyboard.GetState());
 		}
 		
-		private string TextDisplay
-		{
-			get
-			{
-				Type inspectedType = widgets.inspectables[selectedIndex].GetType();
-				string baseType = string.Empty;
-				if (inspectedType.BaseType != null)
-				{
-					baseType = $" BaseType: {inspectedType.BaseType.Name}";
-				}
-				
-				return $"\nInspecting object [{selectedIndex+1}] of [{widgets.inspectables.Count}]:\n\n Type: {inspectedType.Name}\n in: {inspectedType.Namespace}\n{baseType}\n\n Assembly:\n{inspectedType.Assembly.GetName().Name}\n\n\n\n\n\n\nIs mouse over GUI: {_desktop.IsMouseOverGUI}";
-			}
-		}
-
 		protected override void Draw(GameTime gameTime)
 		{
 			base.Draw(gameTime);
@@ -153,7 +111,7 @@ namespace Myra.Samples.Inspector
 			// Set render target
 			GraphicsContext.CommandList.SetRenderTargetAndViewport(GraphicsDevice.Presenter.DepthStencilBuffer, GraphicsDevice.Presenter.BackBuffer);
 #endif
-			widgets.labelOverGui.Text = TextDisplay;
+			_widgets.OnPreRender();
 			_desktop.Render();
 		}
 	}
