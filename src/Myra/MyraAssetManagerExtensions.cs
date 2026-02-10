@@ -16,82 +16,13 @@ using Stride.Core.Mathematics;
 using Texture2D = Stride.Graphics.Texture;
 #else
 using System.Drawing;
-using SolidBrush = Myra.Graphics2D.Brushes.SolidBrush;
-using Color = FontStashSharp.FSColor;
 using Texture2D = System.Object;
-using StbImageSharp;
-using System.IO;
 #endif
 
 namespace AssetManagementBase
 {
 	public static class MyraAssetManagerExtensions
 	{
-#if PLATFORM_AGNOSTIC
-		internal class Texture2DWrapper
-		{
-			public int Width { get; private set; }
-			public int Height { get; private set; }
-			public object Texture { get; private set; }
-
-			public Texture2DWrapper(int width, int height, object texture)
-			{
-				Width = width;
-				Height = height;
-				Texture = texture;
-			}
-		}
-
-		private static AssetLoader<Texture2DWrapper> _textureLoader = (manager, assetName, settings, tag) =>
-		{
-			ImageResult result = null;
-			using (var stream = manager.Open(assetName))
-			{
-				if (stream.CanSeek)
-				{
-					result = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
-				}
-				else
-				{
-					// If stream doesnt provide seek functionaly, use MemoryStream instead
-					using (var ms = new MemoryStream())
-					{
-						stream.CopyTo(ms);
-						ms.Seek(0, SeekOrigin.Begin);
-						result = ImageResult.FromStream(ms, ColorComponents.RedGreenBlueAlpha);
-					}
-				}
-			}
-
-			// Premultiply Alpha
-			var b = result.Data;
-			for (var i = 0; i < result.Data.Length; i += 4)
-			{
-				var falpha = b[i + 3] / 255.0f;
-				b[i] = (byte)(b[i] * falpha);
-				b[i + 1] = (byte)(b[i + 1] * falpha);
-				b[i + 2] = (byte)(b[i + 2] * falpha);
-			}
-
-			var textureManager = MyraEnvironment.Platform.Renderer.TextureManager;
-			var texture = textureManager.CreateTexture(result.Width, result.Height);
-			textureManager.SetTextureData(texture, new Rectangle(0, 0, result.Width, result.Height), result.Data);
-			return new Texture2DWrapper(result.Width, result.Height, texture);
-		};
-
-		internal static Texture2DWrapper LoadTexture2D(this AssetManager assetManager, string assetName) =>
-				assetManager.UseLoader(_textureLoader, assetName);
-#endif
-
-		private class FontSystemLoadingSettings : IAssetSettings
-		{
-			public Texture2D ExistingTexture { get; set; }
-			public Rectangle ExistingTextureUsedSpace { get; set; }
-			public string[] AdditionalFonts { get; set; }
-
-			public string BuildKey() => string.Empty;
-		}
-
 		private static AssetLoader<TextureRegionAtlas> _atlasLoader = (manager, assetName, settings, tag) =>
 		{
 			var data = manager.ReadAsString(assetName);
@@ -101,32 +32,6 @@ namespace AssetManagementBase
 #else
 			return TextureRegionAtlas.Load(data, name => manager.LoadTexture2D(name).Texture);
 #endif
-		};
-
-		private static AssetLoader<FontSystem> _fontSystemLoader = (manager, assetName, settings, tag) =>
-		{
-			var fontSystemSettings = new FontSystemSettings();
-
-			var fontSystemLoadingSettings = (FontSystemLoadingSettings)settings;
-			if (fontSystemLoadingSettings != null)
-			{
-				fontSystemSettings.ExistingTexture = fontSystemLoadingSettings.ExistingTexture;
-				fontSystemSettings.ExistingTextureUsedSpace = fontSystemLoadingSettings.ExistingTextureUsedSpace;
-			};
-
-			var fontSystem = new FontSystem(fontSystemSettings);
-			var data = manager.ReadAsByteArray(assetName);
-			fontSystem.AddFont(data);
-			if (fontSystemLoadingSettings != null && fontSystemLoadingSettings.AdditionalFonts != null)
-			{
-				foreach (var file in fontSystemLoadingSettings.AdditionalFonts)
-				{
-					data = manager.ReadAsByteArray(file);
-					fontSystem.AddFont(data);
-				}
-			}
-
-			return fontSystem;
 		};
 
 		private static AssetLoader<StaticSpriteFont> _staticFontLoader = (manager, assetName, settings, tag) =>
@@ -177,9 +82,9 @@ namespace AssetManagementBase
 				if (fontFile.EndsWith(".ttf") || fontFile.EndsWith(".otf"))
 				{
 					var parts = new List<string>()
-						{
-							fontFile
-						};
+					{
+						fontFile
+					};
 
 					var typeAttribute = el.Attribute("Effect");
 					if (typeAttribute != null)
@@ -196,12 +101,12 @@ namespace AssetManagementBase
 					}
 
 					parts.Add(el.Attribute("Size").Value);
-					var fontSystem = LoadFontSystem(manager, fontFile, existingTexture: existingTexture, existingTextureUsedSpace: existingTextureUsedSpace);
+					var fontSystem = manager.LoadFontSystem(fontFile, existingTexture: existingTexture, existingTextureUsedSpace: existingTextureUsedSpace);
 					font = fontSystem.GetFont(float.Parse(el.Attribute("Size").Value));
 				}
 				else if (fontFile.EndsWith(".fnt"))
 				{
-					font = manager.LoadStaticSpriteFont(fontFile);
+					font = manager.MyraLoadStaticSpriteFont(fontFile);
 				}
 				else
 				{
@@ -243,23 +148,7 @@ namespace AssetManagementBase
 #endif
 		}
 
-		public static FontSystem LoadFontSystem(this AssetManager assetManager, string assetName, string[] additionalFonts = null, Texture2D existingTexture = null, Rectangle existingTextureUsedSpace = default(Rectangle))
-		{
-			FontSystemLoadingSettings settings = null;
-			if (additionalFonts != null || existingTexture != null)
-			{
-				settings = new FontSystemLoadingSettings
-				{
-					AdditionalFonts = additionalFonts,
-					ExistingTexture = existingTexture,
-					ExistingTextureUsedSpace = existingTextureUsedSpace
-				};
-			}
-
-			return assetManager.UseLoader(_fontSystemLoader, assetName, settings);
-		}
-
-		public static StaticSpriteFont LoadStaticSpriteFont(this AssetManager assetManager, string assetName) => assetManager.UseLoader(_staticFontLoader, assetName);
+		internal static StaticSpriteFont MyraLoadStaticSpriteFont(this AssetManager assetManager, string assetName) => assetManager.UseLoader(_staticFontLoader, assetName);
 
 		/// <summary>
 		/// Loads a font by either ttf name/size(i.e. 'font.ttf:32') or by fnt name(i.e. 'font.fnt')
@@ -271,31 +160,20 @@ namespace AssetManagementBase
 		{
 			if (assetName.Contains(".fnt"))
 			{
-				return assetManager.LoadStaticSpriteFont(assetName);
+				return assetManager.MyraLoadStaticSpriteFont(assetName);
 			}
 			else if (assetName.Contains(".ttf"))
 			{
+
 				var parts = assetName.Split(':');
 				if (parts.Length < 2)
 				{
 					throw new ArgumentException("Missing font size");
 				}
 
-				string fontPath = parts[0].Trim();
-				if (!int.TryParse(parts[1].Trim(), out int fontSize))
-				{
-					throw new ArgumentException($"Font size is not a number: '{parts[1]}'");
-				}
+				var fontSize = int.Parse(parts[1].Trim());
+				var fontSystem = assetManager.LoadFontSystem(parts[0].Trim());
 
-				if (fontSize <= 0)
-					fontSize = 1;
-				
-				FontSystem fontSystem;
-#if PLATFORM_AGNOSTIC
-				fontSystem = LoadFontSystem(assetManager, fontPath);
-#else
-				fontSystem = XNAssetsExtFontStashSharp.LoadFontSystem(assetManager, fontPath);
-#endif
 				return fontSystem.GetFont(fontSize);
 			}
 
