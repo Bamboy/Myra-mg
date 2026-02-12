@@ -1,4 +1,5 @@
 using System;
+using Myra.Utility.Types;
 
 namespace Myra.Graphics2D.UI.Properties
 {
@@ -22,7 +23,7 @@ namespace Myra.Graphics2D.UI.Properties
     /// <summary>
     /// Encapsulates a widget and .Net property or field, for the purposes of display or editing by the user.
     /// </summary>
-    public abstract class PropertyEditor : IRecord
+    public abstract class PropertyEditor : IRecordReference
     {
 #region Statics
         private static readonly Type[] ActivatorTypeArgs = { typeof(IInspector), typeof(Record) };
@@ -84,7 +85,9 @@ namespace Myra.Graphics2D.UI.Properties
         protected abstract bool TryCreateEditorWidget(out Widget widget);
         
         public Type Type => _record.Type;
-        object IRecord.GetValue(object field) => _record.GetValue(field);
+        object IRecordReference.GetValue(object field) => _record.GetValue(field);
+        Record IRecordReference.Record => _record;
+        bool IRecordReference.IsReadOnly => !_record.HasSetter;
         public void SetValue(object field, object value)
         {
             _record.SetValue(field, value);
@@ -93,7 +96,7 @@ namespace Myra.Graphics2D.UI.Properties
     }
     
     /// <inheritdoc cref="PropertyEditor"/>
-    public abstract class PropertyEditor<T> : PropertyEditor, IRecord<T>
+    public abstract class PropertyEditor<T> : PropertyEditor, IRecordReference<T>
     {
         protected abstract bool CreatorPicker(out WidgetCreatorDelegate creatorDelegate);
         

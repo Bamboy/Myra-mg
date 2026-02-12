@@ -17,6 +17,15 @@ namespace Myra.Graphics2D.UI.Properties
             if (!_init)
                 InitializeRegistry();
 
+            for (int i = 0; i < _registry.Count; i++)
+            {
+                if (_registry[i].CanEditType(propertyKind))
+                {
+                    editorType = _registry[i].EditorType;
+                    return true;
+                }
+            }
+            
             string str = EditorTypeRegistry.TypeToString(propertyKind);
             for (int i = 0; i < _registry.Count; i++)
             {
@@ -27,14 +36,6 @@ namespace Myra.Graphics2D.UI.Properties
                 }
             }
             
-            for (int i = 0; i < _registry.Count; i++)
-            {
-                if (_registry[i].CanEditType(propertyKind))
-                {
-                    editorType = _registry[i].EditorType;
-                    return true;
-                }
-            }
             //typeof(IList).IsAssignableFrom(propertyKind)
             editorType = null;
             return false;

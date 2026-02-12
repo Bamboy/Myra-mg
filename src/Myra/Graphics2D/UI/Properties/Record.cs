@@ -7,7 +7,7 @@ namespace Myra.Graphics2D.UI.Properties
 	/// <summary>
 	/// Base for encapsulating reflective information using <see cref="MemberInfo"/>.
 	/// </summary>
-	public abstract class Record : IRecord
+	public abstract class Record
 	{
 		public bool HasSetter { get; set; }
 		public string Category { get; set; }

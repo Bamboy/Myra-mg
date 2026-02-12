@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Myra.Utility;
+using Myra.Utility.Types;
 
 namespace Myra.Graphics2D.UI.Properties
 {
@@ -18,20 +19,33 @@ namespace Myra.Graphics2D.UI.Properties
             TypeNames = TypeToString(propertyTypes);
         }
 
-        public bool CanEditType(Type value)
+        public bool CanEditType(Type type, bool allowCasts = true)
         {
+            if (!allowCasts)
+            {
+                for (int i = 0; i < Types.Length; i++)
+                {
+                    if (object.ReferenceEquals(Types[i], type))
+                        return true;
+                }
+                return CanEditType( TypeToString(type) );
+            }
+            
             for (int i = 0; i < Types.Length; i++)
             {
-                if (Types[i].IsInterface && Types[i].IsAssignableFrom(value))
+                Type supported = Types[i];
+                if (object.ReferenceEquals(supported, type))
+                    return true;
+                if (supported.IsInterface && supported.IsAssignableFrom(type))
                     return true;
             }
-            return CanEditType( TypeToString(value) );
+            return CanEditType( TypeToString(type) );
         }
         public bool CanEditType(string value)
         {
-            foreach (string other in TypeNames)
+            foreach (string supported in TypeNames)
             {
-                if(StringComparer.InvariantCultureIgnoreCase.Equals(other, value))
+                if(StringComparer.InvariantCultureIgnoreCase.Equals(supported, value))
                     return true;
             }
             return false;

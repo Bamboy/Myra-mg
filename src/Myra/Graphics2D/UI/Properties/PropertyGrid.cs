@@ -203,9 +203,7 @@ namespace Myra.Graphics2D.UI.Properties
 		[Browsable(false)]
 		[XmlIgnore]
 		public Func<Record, object, Widget> CustomWidgetProvider;
-
-		private object _selected;
-
+		
 		public event EventHandler<GenericEventArgs<string>> PropertyChanged;
 		public event EventHandler ObjectChanged;
 
