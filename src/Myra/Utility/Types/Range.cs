@@ -1,59 +1,48 @@
 using System;
+using Generic.Math;
 
 namespace Myra.Utility.Types
 {
-    public struct Range<TNumber> where TNumber : struct
+    /// <summary>
+    /// Represents a generic value range with optional minimum and maximum clamp.
+    /// </summary>
+    public struct Range<TNum> where TNum : struct
     {
         static Range()
         {
-            Type arg = typeof(TNumber);
-            TypeInfo info = TypeHelper<TNumber>.Info;
+            Type arg = typeof(TNum);
+            TypeInfo info = TypeHelper<TNum>.Info;
             
             if(info.IsNullable)
                 throw new ArgumentException($"Invalid Generic-Type Argument: '{arg}', Nullable types are unsupported");
             if(!info.IsNumber)
                 throw new ArgumentException($"Invalid Generic-Type Argument: '{arg}', Only numeric types are supported");
-            
         }
-        // TODO import https://github.com/HelloKitty/Generic.Math
         
-        public Range(TNumber min, TNumber max)
+        public Range(TNum min, TNum max)
         {
-            _applyMin = true;
-            _applyMax = true;
             _min = min;
             _max = max;
         }
-        public Range(TNumber? min = null, TNumber? max = null)
+        public Range(TNum? min = null, TNum? max = null)
         {
-            _applyMin = min.HasValue;
-            _applyMax = max.HasValue;
-            _min = _applyMin ? min.Value : default;
-            _max = _applyMax ? max.Value : default;
-        }
-
-        private bool _applyMin, _applyMax;
-        private TNumber _min, _max;
-
-        public TNumber? Min
-        {
-            get => _min;
-            set
-            {
-                _applyMin = value.HasValue;
-                _min = value ?? default;
-            }
-        }
-        public TNumber? Max
-        {
-            get => _max;
-            set
-            {
-                _applyMax = value.HasValue;
-                _max = value ?? default;
-            }
+            _min = min;
+            _max = max;
         }
         
-        //Math.Max(_min, value);
+        private TNum? _min, _max;
+
+        public TNum? Min
+        {
+            get => _min;
+            set => _min = value;
+        }
+        public TNum? Max
+        {
+            get => _max;
+            set => _max = value;
+        }
+
+        public TNum Clamp(TNum value) => GenericMathExtra<TNum>.Clamp(value, _min, _max);
     }
 }

@@ -21,7 +21,7 @@ using Texture2D = System.Object;
 
 namespace AssetManagementBase
 {
-	public static class MyraAssetManagerExtensions
+	public static partial class MyraAssetManagerExtensions
 	{
 		private static AssetLoader<TextureRegionAtlas> _atlasLoader = (manager, assetName, settings, tag) =>
 		{

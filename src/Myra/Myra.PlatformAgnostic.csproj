@@ -18,6 +18,7 @@
   <ItemGroup>
     <PackageReference Include="AssetManagementBase" Version="0.7.1" />
     <PackageReference Include="FontStashSharp.PlatformAgnostic" Version="$(FontStashSharpVersion)" />
+    <PackageReference Include="Generic.Math" Version="1.0.2" />
     <PackageReference Include="info.lundin.math.dll" Version="$(InfoLundinMathVersion)" />
   </ItemGroup>  
 </Project>

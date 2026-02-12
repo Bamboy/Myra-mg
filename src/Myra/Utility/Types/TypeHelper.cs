@@ -32,7 +32,7 @@ namespace Myra.Utility.Types
     
     /// <summary>
     /// Provides static helpers and cached info about a generic type <typeparamref name="T"/>.
-    /// Accessing a type via this class will load a static <see cref="TypeInfo"/> 
+    /// Accessing a type via this class will load a <see cref="TypeInfo"/> associated with that type.
     /// </summary>
     internal static class TypeHelper<T>
     {
