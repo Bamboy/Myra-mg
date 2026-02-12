@@ -40,6 +40,7 @@ namespace Myra.Samples.Inspector
             return new List<object>()
             {
                 new SomeTypesInAClass(),
+                new SomeNumerics(),
                 this,
                 propertyGrid,
                 InspectGame.Instance

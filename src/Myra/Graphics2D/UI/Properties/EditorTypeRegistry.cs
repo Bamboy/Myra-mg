@@ -6,34 +6,36 @@ using Myra.Utility.Types;
 
 namespace Myra.Graphics2D.UI.Properties
 {
-    public sealed class EditorTypeRegistry
+    internal sealed class EditorTypeRegistry
     {
-        public readonly Type EditorType;
-        private readonly Type[] Types;
-        private readonly string[] TypeNames;
-
+        private readonly Type _editorType;
+        private readonly Type[] _types;
+        private readonly string[] _typeNames;
+        public Type EditorType => _editorType;
+        public bool IsOpenGenericType => _editorType.IsGenericTypeDefinition;
+        
         public EditorTypeRegistry(Type editorType, params Type[] propertyTypes)
         {
-            EditorType = editorType;
-            Types = propertyTypes;
-            TypeNames = TypeToString(propertyTypes);
+            _editorType = editorType;
+            _types = propertyTypes;
+            _typeNames = TypeToString(propertyTypes);
         }
 
         public bool CanEditType(Type type, bool allowCasts = true)
         {
             if (!allowCasts)
             {
-                for (int i = 0; i < Types.Length; i++)
+                for (int i = 0; i < _types.Length; i++)
                 {
-                    if (object.ReferenceEquals(Types[i], type))
+                    if (object.ReferenceEquals(_types[i], type))
                         return true;
                 }
                 return CanEditType( TypeToString(type) );
             }
             
-            for (int i = 0; i < Types.Length; i++)
+            for (int i = 0; i < _types.Length; i++)
             {
-                Type supported = Types[i];
+                Type supported = _types[i];
                 if (object.ReferenceEquals(supported, type))
                     return true;
                 if (supported.IsInterface && supported.IsAssignableFrom(type))
@@ -43,7 +45,7 @@ namespace Myra.Graphics2D.UI.Properties
         }
         public bool CanEditType(string value)
         {
-            foreach (string supported in TypeNames)
+            foreach (string supported in _typeNames)
             {
                 if(StringComparer.InvariantCultureIgnoreCase.Equals(supported, value))
                     return true;

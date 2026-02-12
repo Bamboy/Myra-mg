@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Linq;
 using Myra.Graphics2D.UI.Styles;
 using System.Xml.Serialization;
+using Generic.Math;
 using Myra.Events;
+using Myra.Utility.Types;
 
 #if MONOGAME || FNA
 using Microsoft.Xna.Framework.Input;
@@ -15,27 +18,19 @@ using Myra.Platform;
 
 namespace Myra.Graphics2D.UI
 {
-	public class SpinButton : Widget
+	public class SpinButton<TNum> : Widget where TNum : struct
 	{
 		private readonly GridLayout _layout = new GridLayout();
 		private readonly TextBox _textField;
 		private readonly Button _upButton;
 		private readonly Button _downButton;
-		private bool _integer = false;
-		private int _decimalPlaces = 0;
-		private float _increment = 1f;
+		private int _decimalPlaces;
+		private TNum _increment;
+		private Range<TNum> _range;
 
 		[Category("Behavior")]
 		[DefaultValue(false)]
 		public bool Nullable { get; set; }
-
-		[Category("Behavior")]
-		[DefaultValue(null)]
-		public float? Maximum { get; set; }
-
-		[Category("Behavior")]
-		[DefaultValue(null)]
-		public float? Minimum { get; set; }
 
 		[DefaultValue(HorizontalAlignment.Left)]
 		public override HorizontalAlignment HorizontalAlignment
@@ -62,20 +57,27 @@ namespace Myra.Graphics2D.UI
 				base.VerticalAlignment = value;
 			}
 		}
-
+		
 		[Category("Behavior")]
-		[DefaultValue(0.0f)]
-		public float? Value
+		[DefaultValue(null)]
+		public TNum? Minimum { get => _range.Min; set => _range.Min = value; }
+		
+		[Category("Behavior")]
+		[DefaultValue(null)]
+		public TNum? Maximum { get => _range.Max; set => _range.Max = value; }
+		
+		[Category("Behavior")]
+		[DefaultValue(null)]
+		public TNum? Value
 		{
 			get
 			{
 				if (string.IsNullOrEmpty(_textField.Text))
 				{
-					return Nullable ? default(float?) : 0.0f;
+					return Nullable ? default(TNum?) : GenericMathExtra<TNum>.Zero;
 				}
 
-				float result;
-				if (float.TryParse(_textField.Text, out result))
+				if(TypeHelper<TNum>.TryParse(_textField.Text, out TNum result))
 				{
 					return result;
 				}
@@ -90,35 +92,31 @@ namespace Myra.Graphics2D.UI
 					throw new Exception("value can't be null when Nullable is false");
 				}
 
-				if (value.HasValue && Minimum.HasValue && value.Value < Minimum.Value)
+				if (value.HasValue)
 				{
-					throw new Exception("Value can't be lower than Minimum");
-				}
-
-				if (value.HasValue && Maximum.HasValue && value.Value > Maximum.Value)
-				{
-					throw new Exception("Value can't be higher than Maximum");
+					value = _range.Clamp(value.Value);
 				}
 
 				if (FixedNumberSize)
 				{
+					throw new NotImplementedException();
 					string MajorString = "";
 					int k = 0;
 					int k2 = 0;
 					if (Maximum.HasValue)
 					{
-						k = Math.Abs(Maximum.Value).ToString().Count();
+						k = GenericMathExtra<TNum>.Abs(Maximum.Value).ToString().Length;
 					}
 					if (Minimum.HasValue)
 					{
-						k2 = Math.Abs(Minimum.Value).ToString().Count();
+						k2 = GenericMathExtra<TNum>.Abs(Minimum.Value).ToString().Length;
 					}
 					k = k > k2 ? k : k2;
 					for (int i = 0; i < k; i++)
 					{
 						MajorString += "0";
 					}
-					if (value.HasValue && value.Value >= 0)
+					if (value.HasValue && GenericMath.GreaterThanOrEqual(value.Value, GenericMathExtra<TNum>.Zero))
 					{
 						MajorString = " " + MajorString;
 					}
@@ -127,7 +125,7 @@ namespace Myra.Graphics2D.UI
 					{
 						MinorString += "0";
 					}
-					_textField.Text = value.HasValue ? value.Value.ToString(MajorString + MinorString) : string.Empty;
+					//_textField.Text = value.HasValue ? value.Value.ToString(MajorString + MinorString) : string.Empty;
 				}
 				else
 				{
@@ -142,26 +140,22 @@ namespace Myra.Graphics2D.UI
 		}
 
 		[Category("Behavior")]
-		[DefaultValue(1f)]
-		public float Increment
+		[DefaultValue(1)]
+		public TNum Increment
 		{
 			get
 			{
 				return _increment;
 			}
-
 			set
 			{
-				if (Integer)
-				{
-					_increment = (int)value;
-				}
-				else
-				{
-					_increment = value;
-				}
+				_increment = value;
 			}
 		}
+		
+		[Category("Behavior")]
+		[DefaultValue(1)]
+		public TNum Mul_Increment { get; set; }
 
 		[Category("Behavior")]
 		[DefaultValue(0)]
@@ -174,7 +168,7 @@ namespace Myra.Graphics2D.UI
 
 			set
 			{
-				if (Integer)
+				if (TypeHelper<TNum>.Info.IsWholeNumber)
 				{
 					_decimalPlaces = 0;
 				}
@@ -189,30 +183,6 @@ namespace Myra.Graphics2D.UI
 		[DefaultValue(false)]
 		public bool FixedNumberSize { get; set; }
 
-		[Category("Behavior")]
-		[DefaultValue(false)]
-		public bool Integer
-		{
-			get
-			{
-				return _integer;
-			}
-
-			set
-			{
-				_integer = value;
-				if (Integer)
-				{
-					_increment = (int)_increment;
-					Value = (int)Value;
-				}
-			}
-		}
-
-		[Category("Behavior")]
-		[DefaultValue(1f)]
-		public float Mul_Increment { get; set; } = 1f;
-
 		[XmlIgnore]
 		[Browsable(false)]
 		public TextBox TextBox => _textField;
@@ -223,17 +193,17 @@ namespace Myra.Graphics2D.UI
 		/// Fires when the value is about to be changed
 		/// Set Cancel to true if you want to cancel the change
 		/// </summary>
-		public event EventHandler<ValueChangingEventArgs<float?>> ValueChanging;
+		public event EventHandler<ValueChangingEventArgs<TNum?>> ValueChanging;
 
 		/// <summary>
 		/// Fires when the value had been changed
 		/// </summary>
-		public event EventHandler<ValueChangedEventArgs<float?>> ValueChanged;
+		public event EventHandler<ValueChangedEventArgs<TNum?>> ValueChanged;
 
 		/// <summary>
 		/// Fires only when the value had been changed by user(doesnt fire if it had been assigned through code)
 		/// </summary>
-		public event EventHandler<ValueChangedEventArgs<float?>> ValueChangedByUser;
+		public event EventHandler<ValueChangedEventArgs<TNum?>> ValueChangedByUser;
 
 		public SpinButton(string styleName = Stylesheet.DefaultStyleName)
 		{
@@ -293,64 +263,68 @@ namespace Myra.Graphics2D.UI
 			Children.Add(_downButton);
 
 			SetStyle(styleName);
-
-			Value = 0;
+			
+			Value = GenericMathExtra<TNum>.Zero;
+			Increment = GenericMathExtra<TNum>.One;
+			Mul_Increment = GenericMathExtra<TNum>.One;
 		}
 
-		private static float? StringToFloat(string s)
+		private static TNum? StringToNumber(string str)
 		{
-			if (string.IsNullOrEmpty(s))
+			if (string.IsNullOrEmpty(str))
 			{
 				return null;
 			}
 
-			float f;
-			if (!float.TryParse(s, out f))
+			if (TypeHelper<TNum>.TryParse(str, out TNum value))
 			{
-				return null;
+				return value;
 			}
 
-			return f;
+			return null;
 		}
 
-		private string NumberToString(float? v)
+		private string NumberToString(TNum? value)
 		{
-			if (v == null)
+			if (value.HasValue)
 			{
-				if (Nullable)
-				{
-					return string.Empty;
-				}
-
-				// Default value
-				return "0";
+				return value.Value.ToString();
 			}
 
-			if (Integer)
+			if (Nullable)
 			{
-				return ((int)v.Value).ToString();
+				return string.Empty;
 			}
-
-			return v.Value.ToString();
+			// Default value
+			return "0";
 		}
 
 		private void _textField_ValueChanging(object sender, ValueChangingEventArgs<string> e)
 		{
-			var s = e.NewValue;
-			if (string.IsNullOrEmpty(s))
+			var str = e.NewValue;
+			if (string.IsNullOrEmpty(str))
 			{
 			}
-			else if (s == "-")
+			else if (str == "-")
 			{
 				// Allow prefix 'minus' only if Minimum lower than zero
-				if (Minimum != null && Minimum.Value >= 0)
+				if (Minimum.HasValue && GenericMath.GreaterThanOrEqual(Minimum.Value, GenericMathExtra<TNum>.Zero))
 				{
 					e.Cancel = true;
 				}
 			}
 			else
 			{
-				float? newValue = null;
+				TNum? newValue = null;
+				if (TypeHelper<TNum>.TryParse(str, out TNum num) && _range.IsInRange(num))
+				{
+					newValue = num;
+				}
+				else
+				{
+					e.Cancel = true;
+				}
+				/*
 				if (Integer)
 				{
 					int i;
@@ -390,17 +364,13 @@ namespace Myra.Graphics2D.UI
 							newValue = f;
 						}
 					}
-				}
-
-				if (newValue != null)
-				{
-				}
+				}*/
 
 				// Now SpinButton's 
 				if (ValueChanging != null)
 				{
-					var args = new ValueChangingEventArgs<float?>(Value, newValue);
-					ValueChanging(this, args);
+					var args = new ValueChangingEventArgs<TNum?>(Value, newValue);
+					ValueChanging.Invoke(this, args);
 					if (args.Cancel)
 					{
 						e.Cancel = true;
@@ -415,27 +385,12 @@ namespace Myra.Graphics2D.UI
 
 		private void TextBoxOnTextChanged(object sender, ValueChangedEventArgs<string> eventArgs)
 		{
-			ValueChanged?.Invoke(this, new ValueChangedEventArgs<float?>(StringToFloat(eventArgs.OldValue), StringToFloat(eventArgs.NewValue)));
+			ValueChanged?.Invoke(this, new ValueChangedEventArgs<TNum?>(StringToNumber(eventArgs.OldValue), StringToNumber(eventArgs.NewValue)));
 		}
 
 		private void TextBoxOnTextChangedByUser(object sender, ValueChangedEventArgs<string> eventArgs)
 		{
-			ValueChangedByUser?.Invoke(this, new ValueChangedEventArgs<float?>(StringToFloat(eventArgs.OldValue), StringToFloat(eventArgs.NewValue)));
-		}
-
-		private bool InRange(float value)
-		{
-			if (Minimum.HasValue && value < Minimum.Value)
-			{
-				return false;
-			}
-
-			if (Maximum.HasValue && value > Maximum.Value)
-			{
-				return false;
-			}
-
-			return true;
+			ValueChangedByUser?.Invoke(this, new ValueChangedEventArgs<TNum?>(StringToNumber(eventArgs.OldValue), StringToNumber(eventArgs.NewValue)));
 		}
 
 		public void ApplySpinButtonStyle(SpinButtonStyle style)
@@ -463,94 +418,52 @@ namespace Myra.Graphics2D.UI
 			ApplySpinButtonStyle(stylesheet.SpinButtonStyles.SafelyGetStyle(name));
 		}
 
-		private void UpButtonOnUp(object sender, EventArgs eventArgs)
+		private void SpinValue(bool spinUpward, bool isMouseWheel)
 		{
-			float value;
-			if (!float.TryParse(_textField.Text, out value))
+			TNum newValue, delta;
+			if (!TypeHelper<TNum>.TryParse(_textField.Text, out newValue))
 			{
-				value = 0;
+				newValue = GenericMathExtra<TNum>.Zero;
 			}
-			value += _increment;
-			if (InRange(value))
+
+			if (isMouseWheel)
+				delta = GenericMath<TNum>.Multiply(_increment, Mul_Increment);
+			else
+				delta = _increment;
+
+			if (spinUpward)
+				newValue = GenericMath<TNum>.Add(newValue, delta);
+			else
+				newValue = GenericMath<TNum>.Subtract(newValue, delta);
+
+			if (_range.IsInRange(newValue))
 			{
-				var changed = Value != value;
-				var oldValue = Value;
-				Value = value;
+				bool changed = GenericMath<TNum>.NotEqual(Value.GetValueOrDefault(), newValue);
+				TNum? oldValue = Value;
+				Value = newValue;
 
 				if (changed)
 				{
-					var ev = ValueChangedByUser;
-					if (ev != null)
-					{
-						ev(this, new ValueChangedEventArgs<float?>(oldValue, value));
-					}
+					ValueChangedByUser?.Invoke(this, new ValueChangedEventArgs<TNum?>(oldValue, newValue));
 				}
 			}
 		}
-		private void DownButtonOnUp(object sender, EventArgs eventArgs)
-		{
-			float value;
-			if (!float.TryParse(_textField.Text, out value))
-			{
-				value = 0;
-			}
-
-			value -= _increment;
-			if (InRange(value))
-			{
-				var changed = Value != value;
-				var oldValue = Value;
-				Value = value;
-
-				if (changed)
-				{
-					var ev = ValueChangedByUser;
-					if (ev != null)
-					{
-						ev(this, new ValueChangedEventArgs<float?>(oldValue, value));
-					}
-				}
-			}
-		}
+		private void UpButtonOnUp(object sender, EventArgs eventArgs) 
+			=> SpinValue(true, false);
+		private void DownButtonOnUp(object sender, EventArgs eventArgs) 
+			=> SpinValue(false, false);
 
 		public override void OnMouseWheel(float delta)
 		{
 			base.OnMouseWheel(delta);
-			float value;
-			if (!float.TryParse(_textField.Text, out value))
-			{
-				value = 0;
-			}
 
 			if (delta < 0 && _downButton.Visible && _downButton.Enabled)
 			{
-				value -= _increment * Mul_Increment;
-				if (InRange(value))
-				{
-					var changed = Value != value;
-					var oldValue = Value;
-					Value = value;
-
-					if (changed)
-					{
-						ValueChangedByUser?.Invoke(this, new ValueChangedEventArgs<float?>(oldValue, value));
-					}
-				}
+				SpinValue(false, true);
 			}
-			else if (delta > 0 && _upButton.Visible && _upButton.Enabled)
+			else if(delta > 0 && _upButton.Visible && _upButton.Enabled)
 			{
-				value += _increment * Mul_Increment;
-				if (InRange(value))
-				{
-					var changed = Value != value;
-					var oldValue = Value;
-					Value = value;
-
-					if (changed)
-					{
-						ValueChangedByUser?.Invoke(this, new ValueChangedEventArgs<float?>(oldValue, value));
-					}
-				}
+				SpinValue(true, true);
 			}
 		}
 
@@ -568,11 +481,11 @@ namespace Myra.Graphics2D.UI
 			if (string.IsNullOrEmpty(_textField.Text) && !Nullable)
 			{
 				var defaultValue = "0";
-				if (Minimum != null && Minimum.Value > 0)
+				if (Minimum.HasValue && GenericMath<TNum>.GreaterThan(Minimum.Value, GenericMathExtra<TNum>.Zero))
 				{
 					defaultValue = NumberToString(Minimum.Value);
 				}
-				else if (Maximum != null && Maximum.Value < 0)
+				else if (Maximum.HasValue && GenericMath<TNum>.LessThan(Maximum.Value, GenericMathExtra<TNum>.Zero))
 				{
 					defaultValue = NumberToString(Maximum.Value);
 				}
@@ -601,7 +514,7 @@ namespace Myra.Graphics2D.UI
 		{
 			base.CopyFrom(w);
 
-			var spinButton = (SpinButton)w;
+			var spinButton = (SpinButton<TNum>)w;
 
 			Nullable = spinButton.Nullable;
 			Minimum = spinButton.Minimum;
@@ -610,8 +523,33 @@ namespace Myra.Graphics2D.UI
 			Increment = spinButton.Increment;
 			DecimalPlaces = spinButton.DecimalPlaces;
 			FixedNumberSize = spinButton.FixedNumberSize;
-			Integer = spinButton.Integer;
 			Mul_Increment = spinButton.Mul_Increment;
+		}
+	}
+	
+	// Helper static class for types
+	internal static class SpinButton
+	{
+		private static ReadOnlyDictionary<Type, Func<Widget>> _typeCtors = new ReadOnlyDictionary<Type, Func<Widget>>(new Dictionary<Type, Func<Widget>>
+		{
+			{ typeof(byte),   () => new SpinButton<byte>()   },
+			{ typeof(sbyte),  () => new SpinButton<sbyte>()  },
+			{ typeof(short),  () => new SpinButton<short>()  },
+			{ typeof(ushort), () => new SpinButton<ushort>() },
+			{ typeof(int),    () => new SpinButton<int>()    },
+			{ typeof(uint),   () => new SpinButton<uint>()   },
+			{ typeof(long),   () => new SpinButton<long>()   },
+			{ typeof(ulong),  () => new SpinButton<ulong>()  },
+			
+			{ typeof(float),   () => new SpinButton<float>()   },
+			{ typeof(double),  () => new SpinButton<double>()  },
+			{ typeof(decimal), () => new SpinButton<decimal>() },
+		});
+
+		public static bool TryCreate(Type numberType, out Widget spinButton)
+		{
+			spinButton = default;
+			return default;
 		}
 	}
 }

@@ -1,7 +1,9 @@
+using Myra.Utility.Types;
+
 namespace Myra.Graphics2D.UI.Properties
 {
     [PropertyEditor(typeof(BooleanPropertyEditor), typeof(bool))]
-    public sealed class BooleanPropertyEditor : PropertyEditor<bool>
+    public sealed class BooleanPropertyEditor : PropertyEditor<bool>, IStructTypeRef<bool>
     {
         public BooleanPropertyEditor(IInspector owner, Record methodInfo) : base(owner, methodInfo)
         {
@@ -46,5 +48,7 @@ namespace Myra.Graphics2D.UI.Properties
             widget = cb;
             return true;
         }
+
+        bool IStructTypeRef<bool>.IsNullable => false;
     }
 }

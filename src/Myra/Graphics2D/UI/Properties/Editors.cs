@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
 using Myra.Utility;
+using Myra.Utility.Types;
 
 namespace Myra.Graphics2D.UI.Properties
 {
@@ -17,21 +18,36 @@ namespace Myra.Graphics2D.UI.Properties
             if (!_init)
                 InitializeRegistry();
 
-            for (int i = 0; i < _registry.Count; i++)
+            foreach (EditorTypeRegistry reg in _registry)
             {
-                if (_registry[i].CanEditType(propertyKind))
+                if (reg.CanEditType(propertyKind))
                 {
-                    editorType = _registry[i].EditorType;
+                    if (reg.IsOpenGenericType)
+                    {
+                        TypeHelper.GetNullableTypeOrPassThrough(ref propertyKind);
+                        editorType = reg.EditorType.MakeGenericType(propertyKind);
+                    }
+                    else
+                    {
+                        editorType = reg.EditorType;
+                    }
                     return true;
                 }
             }
             
             string str = EditorTypeRegistry.TypeToString(propertyKind);
-            for (int i = 0; i < _registry.Count; i++)
+            foreach (EditorTypeRegistry reg in _registry)
             {
-                if (_registry[i].CanEditType(str))
+                if (reg.CanEditType(str))
                 {
-                    editorType = _registry[i].EditorType;
+                    if (reg.IsOpenGenericType)
+                    {
+                        editorType = reg.EditorType.MakeGenericType(propertyKind);
+                    }
+                    else
+                    {
+                        editorType = reg.EditorType;
+                    }
                     return true;
                 }
             }

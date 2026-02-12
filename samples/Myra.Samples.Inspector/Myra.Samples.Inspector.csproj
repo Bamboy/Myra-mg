@@ -14,4 +14,8 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\Myra\Myra.MonoGame.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+      <ReferencePathWithRefAssemblies Update="\home\bamboy\.nuget\packages\generic.math\1.0.2\lib\netstandard1.3\Generic.Math.dll" />
+    </ItemGroup>
 </Project>

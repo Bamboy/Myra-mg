@@ -28,6 +28,15 @@ namespace Myra.Utility.Types
             result = default;
             return false;
         }
+        
+        /// <summary>
+        /// If <typeparamref name="T"/> is <see cref="System.Nullable{}"/>, return the generic type the nullable holds, else return type <typeparamref name="T"/>.
+        /// </summary>
+        public static void GetNullableTypeOrPassThrough(ref Type type)
+        {
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+                type = type.GenericTypeArguments[0];
+        }
     }
     
     /// <summary>
@@ -41,6 +50,8 @@ namespace Myra.Utility.Types
             _type = typeof(T);
             _info = new TypeInfo(_type);
             TypeHelper.RegisterHelperForType<T>();
+
+            FindMethodTryParse();
         }
 
         private static readonly Type _type;
@@ -62,5 +73,53 @@ namespace Myra.Utility.Types
         }
         
         public static bool CanAssign(Type other) => _type.IsAssignableFrom(other);
+
+        private static MethodInfo _tryParse;
+        private static void FindMethodTryParse()
+        {
+            const string METHOD_NAME = "TryParse";
+            Type type = typeof(T);
+            try
+            {
+                // public static bool TryParse(string str, out TData value)
+                _tryParse = type.GetMethod(METHOD_NAME,
+                    BindingFlags.Static | BindingFlags.Public, null,
+                    new[] { typeof(string), type.MakeByRefType() }, null);
+                
+                if (_tryParse == null)
+                {
+                    throw new Exception($"Reflection Error: '{type.Name}' does not contain a public static method '{METHOD_NAME}'");
+                }
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"Unhandled Reflection Error: {e}");
+            }
+        }
+        
+        /// <summary>
+        /// Attempts find and invoke <typeparamref name="T"/>'s static TryParse() method using Reflection.
+        /// </summary>
+        public static bool TryParse(string str, out T data)
+        {
+            if (_tryParse == null)
+                throw new NotSupportedException($"Not supported: {typeof(T)}.TryParse()");
+            
+            // public static bool TryParse(string str, out TData value)
+            // The method's "out TData" gets written to object[] array.
+            object[] param = new object[] { str, default(T) }; 
+            object result = _tryParse.Invoke(null, param); 
+                
+            if (result is bool didConvert)
+            {
+                // Read what the method wrote as "out T"
+                data = didConvert ? (T)param[1] : default;
+                return didConvert;
+            }
+            
+            // We really might want to throw an exception here instead
+            data = default;
+            return false;
+        }
     }
 }

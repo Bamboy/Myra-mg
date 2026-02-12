@@ -17,11 +17,11 @@ namespace Myra.Graphics2D.UI.Properties
             this.attached = attached;
             this.editTypes = editTypes;
         }
-        public EditorTypeRegistry GetRegistry() => new EditorTypeRegistry(attached, editTypes);
+        internal EditorTypeRegistry GetRegistry() => new EditorTypeRegistry(attached, editTypes);
     }
     
     /// <summary>
-    /// Encapsulates a widget and .Net property or field, for the purposes of display or editing by the user.
+    /// Encapsulates a <see cref="Widget"/> (UI element) and <see cref="Record"/> (.Net property or field), for the purposes of display or editing by the user.
     /// </summary>
     public abstract class PropertyEditor : IRecordReference
     {
@@ -83,16 +83,15 @@ namespace Myra.Graphics2D.UI.Properties
 
         private bool TryCreateWidget(out Widget widget) => TryCreateEditorWidget(out widget);
         protected abstract bool TryCreateEditorWidget(out Widget widget);
-        
-        public Type Type => _record.Type;
-        object IRecordReference.GetValue(object field) => _record.GetValue(field);
-        Record IRecordReference.Record => _record;
-        bool IRecordReference.IsReadOnly => !_record.HasSetter;
         public void SetValue(object field, object value)
         {
             _record.SetValue(field, value);
             _owner.FireChanged(_record.Name);
         }
+        public Type Type => _record.Type;
+        object IRecordReference.GetValue(object field) => _record.GetValue(field);
+        Record IRecordReference.Record => _record;
+        bool IRecordReference.IsReadOnly => !_record.HasSetter;
     }
     
     /// <inheritdoc cref="PropertyEditor"/>

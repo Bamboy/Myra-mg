@@ -3,6 +3,7 @@ using Myra.Graphics2D.UI.Properties;
 
 namespace Myra.Utility.Types
 {
+    
     public interface IRecordReference
     {
         Record Record { get; }
@@ -40,6 +41,12 @@ namespace Myra.Utility.Types
     
     internal static class TypeInterfaceExtensions
     {
+        /// <summary>
+        /// Checks if the <see cref="Record"/> is null
+        /// </summary>
+        public static bool IsNull(this IRecordReference obj)
+            => obj == null || obj.Record == null;
+        
         public static TypeInfo TypeInfo<T>(this IRecordReference<T> obj) 
             => TypeHelper<T>.Info;
         public static bool IsNullable<T>(this IStructTypeRef<T> obj)  where T : struct

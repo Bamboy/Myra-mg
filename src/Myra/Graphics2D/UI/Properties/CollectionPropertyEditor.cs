@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Myra.Graphics2D.UI.Properties
 {
-	[PropertyEditor(typeof(CollectionPropertyEditor), typeof(IList))]
+	//[PropertyEditor(typeof(CollectionPropertyEditor), typeof(IList))]
 	public class CollectionPropertyEditor : PropertyEditor<IList>
 	{
 		private readonly Type collectionKind;

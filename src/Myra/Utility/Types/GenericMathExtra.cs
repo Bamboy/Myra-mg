@@ -6,7 +6,7 @@ namespace Myra.Utility.Types
     /// <summary>
     /// Supplemental generic math methods for <see cref="GenericMath"/>.
     /// </summary>
-    public static class GenericMathExtra<TNum> where TNum : struct
+    internal static class GenericMathExtra<TNum> where TNum : struct
     {
         static GenericMathExtra()
         {
@@ -17,8 +17,23 @@ namespace Myra.Utility.Types
                 throw new ArgumentException($"Invalid Generic-Type Argument: '{arg}', Nullable types are unsupported");
             if(!info.IsNumber)
                 throw new ArgumentException($"Invalid Generic-Type Argument: '{arg}', Only numeric types are supported");
+
+            Zero = GenericMath<TNum>.Zero;
+            One = GenericMath<int, TNum>.Convert( 1 );
         }
+
+        public static readonly TNum Zero;
+        public static readonly TNum One;
         
+        public static TNum Abs(TNum value)
+        {
+            if (TypeHelper<TNum>.Info.IsSignedNumber)
+            {
+                if (GenericMath.LessThan(value, GenericMath<TNum>.Zero))
+                    value = GenericMath<TNum>.Negate(value);
+            }
+            return value;
+        }
         public static TNum Min(TNum lhs, TNum rhs)
             => GenericMath.LessThan(lhs, rhs) ? lhs : rhs;
         public static TNum Max(TNum lhs, TNum rhs)
