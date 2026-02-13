@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using Myra.Graphics2D.UI.Styles;
+using System.Globalization;
 using System.Xml.Serialization;
-using Generic.Math;
+using Myra.Graphics2D.UI.Styles;
 using Myra.Events;
 using Myra.Utility.Types;
 
@@ -20,52 +20,155 @@ namespace Myra.Graphics2D.UI
 {
 	public class SpinButton<TNum> : Widget where TNum : struct
 	{
+		private const string DefaultStringWhole = "0";
+		private const string DefaultStringFloat = "0.0";
+		private static readonly bool _numTypeHasSign;
+		private static readonly bool _numTypeIsFloating;
+		private static readonly string _defaultString;
+		private static readonly Func<TNum, NumberFormatInfo, string> _strConverter;
+		
+		static SpinButton() //Static ctor on generics is invoked once per type-instance
+		{
+			Type arg = typeof(TNum); //Validate generic arg
+			if (arg == typeof(byte) || arg == typeof(sbyte))
+			{
+				throw new ArgumentException($"Invalid Generic-Type Argument: '{arg}' does not have full math support. Convert to another type first");
+			}
+
+			TypeInfo info = TypeHelper<TNum>.Info;
+			_numTypeHasSign = info.IsSignedNumber;
+			_numTypeIsFloating = info.IsFractionalNumber;
+			_defaultString = _numTypeIsFloating ? DefaultStringFloat : DefaultStringWhole;
+			
+			// Assign strConverter depending on TNum type.
+			// object.ToString() can't accept IFormatProvider...
+			switch (info.Code)
+			{
+				// Handle floating point types
+				case TypeCode.Single:
+					_strConverter = (TNum num, NumberFormatInfo formatter) =>
+					{
+						if (num is float value)
+							return value.ToString(formatter);
+						throw new TypeAccessException();
+					};
+					break;
+				case TypeCode.Double:
+					_strConverter = (TNum num, NumberFormatInfo formatter) =>
+					{
+						if (num is double value)
+							return value.ToString(formatter);
+						throw new TypeAccessException();
+					};
+					break;
+				case TypeCode.Decimal:
+					_strConverter = (TNum num, NumberFormatInfo formatter) =>
+					{
+						if (num is decimal value)
+							return value.ToString(formatter);
+						throw new TypeAccessException();
+					};
+					break;
+				
+				// Handle signed whole number types
+				case TypeCode.Int16:
+					_strConverter = (TNum num, NumberFormatInfo formatter) =>
+					{
+						if (num is short value)
+							return value.ToString(formatter);
+						throw new TypeAccessException();
+					};
+					break;
+				case TypeCode.Int32:
+					_strConverter = (TNum num, NumberFormatInfo formatter) =>
+					{
+						if (num is int value)
+							return value.ToString(formatter);
+						throw new TypeAccessException();
+					};
+					break;
+				case TypeCode.Int64:
+					_strConverter = (TNum num, NumberFormatInfo formatter) =>
+					{
+						if (num is long value)
+							return value.ToString(formatter);
+						throw new TypeAccessException();
+					};
+					break;
+				
+				// Handle unsigned whole number types
+				case TypeCode.UInt16:
+					_strConverter = (TNum num, NumberFormatInfo formatter) =>
+					{
+						if (num is ushort value)
+							return value.ToString(formatter);
+						throw new TypeAccessException();
+					};
+					break;
+				case TypeCode.UInt32:
+					_strConverter = (TNum num, NumberFormatInfo formatter) =>
+					{
+						if (num is uint value)
+							return value.ToString(formatter);
+						throw new TypeAccessException();
+					};
+					break;
+				case TypeCode.UInt64:
+					_strConverter = (TNum num, NumberFormatInfo formatter) =>
+					{
+						if (num is ulong value)
+							return value.ToString(formatter);
+						throw new TypeAccessException();
+					};
+					break;
+
+				default:
+					throw new TypeAccessException();
+			}
+		}
+		
 		private readonly GridLayout _layout = new GridLayout();
 		private readonly TextBox _textField;
 		private readonly Button _upButton;
 		private readonly Button _downButton;
+		private readonly NumberFormatInfo _formatter;
 		private int _decimalPlaces;
+		private bool _fixedDigits;
 		private TNum _increment;
 		private Range<TNum> _range;
-
-		[Category("Behavior")]
-		[DefaultValue(false)]
-		public bool Nullable { get; set; }
 
 		[DefaultValue(HorizontalAlignment.Left)]
 		public override HorizontalAlignment HorizontalAlignment
 		{
-			get
-			{
-				return base.HorizontalAlignment;
-			}
-			set
-			{
-				base.HorizontalAlignment = value;
-			}
+			get => base.HorizontalAlignment;
+			set => base.HorizontalAlignment = value;
 		}
 
 		[DefaultValue(VerticalAlignment.Top)]
 		public override VerticalAlignment VerticalAlignment
 		{
-			get
-			{
-				return base.VerticalAlignment;
-			}
-			set
-			{
-				base.VerticalAlignment = value;
-			}
+			get => base.VerticalAlignment;
+			set => base.VerticalAlignment = value;
 		}
 		
 		[Category("Behavior")]
-		[DefaultValue(null)]
-		public TNum? Minimum { get => _range.Min; set => _range.Min = value; }
-		
+		[DefaultValue(false)]
+		public bool Nullable { get; set; }
+
 		[Category("Behavior")]
 		[DefaultValue(null)]
-		public TNum? Maximum { get => _range.Max; set => _range.Max = value; }
-		
+		public TNum? Minimum
+		{
+			get => _range.Min; 
+			set => _range.Min = value;
+		}
+		[Category("Behavior")]
+		[DefaultValue(null)]
+		public TNum? Maximum
+		{
+			get => _range.Max;
+			set => _range.Max = value;
+		}
 		[Category("Behavior")]
 		[DefaultValue(null)]
 		public TNum? Value
@@ -74,7 +177,7 @@ namespace Myra.Graphics2D.UI
 			{
 				if (string.IsNullOrEmpty(_textField.Text))
 				{
-					return Nullable ? default(TNum?) : GenericMathExtra<TNum>.Zero;
+					return Nullable ? default(TNum?) : MathHelper<TNum>.Zero;
 				}
 
 				if(TypeHelper<TNum>.TryParse(_textField.Text, out TNum result))
@@ -87,50 +190,55 @@ namespace Myra.Graphics2D.UI
 
 			set
 			{
-				if (value == null && !Nullable)
+				if (!value.HasValue && !Nullable)
 				{
-					throw new Exception("value can't be null when Nullable is false");
+					throw new Exception("Value can't be set null when Nullable is false");
 				}
 
 				if (value.HasValue)
 				{
 					value = _range.Clamp(value.Value);
 				}
-
+				
+				_textField.Text = value.HasValue ? 
+					_strConverter.Invoke(value.Value, _formatter) : 
+					string.Empty;
+				/*
 				if (FixedNumberSize)
 				{
 					throw new NotImplementedException();
-					string MajorString = "";
+					string majorString = "";
 					int k = 0;
 					int k2 = 0;
 					if (Maximum.HasValue)
 					{
-						k = GenericMathExtra<TNum>.Abs(Maximum.Value).ToString().Length;
+						k = MathHelper<TNum>.Abs(Maximum.Value).ToString().Length;
 					}
 					if (Minimum.HasValue)
 					{
-						k2 = GenericMathExtra<TNum>.Abs(Minimum.Value).ToString().Length;
+						k2 = MathHelper<TNum>.Abs(Minimum.Value).ToString().Length;
 					}
 					k = k > k2 ? k : k2;
 					for (int i = 0; i < k; i++)
 					{
-						MajorString += "0";
+						majorString += ZeroChar;
 					}
-					if (value.HasValue && GenericMath.GreaterThanOrEqual(value.Value, GenericMathExtra<TNum>.Zero))
+					if (value.HasValue && MathHelper<TNum>.GreaterThanOrEqual(value.Value, MathHelper<TNum>.Zero))
 					{
-						MajorString = " " + MajorString;
+						majorString = SpaceChar + majorString;
 					}
-					string MinorString = ".";
+
+					string minorString = DecimalChar.ToString();
 					for (int i = 0; i < _decimalPlaces; i++)
 					{
-						MinorString += "0";
+						minorString += ZeroChar;
 					}
 					//_textField.Text = value.HasValue ? value.Value.ToString(MajorString + MinorString) : string.Empty;
 				}
 				else
 				{
 					_textField.Text = value.HasValue ? value.Value.ToString() : string.Empty;
-				}
+				}*/
 
 				if (_textField.Text != null)
 				{
@@ -143,14 +251,8 @@ namespace Myra.Graphics2D.UI
 		[DefaultValue(1)]
 		public TNum Increment
 		{
-			get
-			{
-				return _increment;
-			}
-			set
-			{
-				_increment = value;
-			}
+			get => _increment;
+			set => _increment = value;
 		}
 		
 		[Category("Behavior")]
@@ -158,30 +260,32 @@ namespace Myra.Graphics2D.UI
 		public TNum Mul_Increment { get; set; }
 
 		[Category("Behavior")]
-		[DefaultValue(0)]
+		[DefaultValue(2)]
 		public int DecimalPlaces
 		{
-			get
-			{
-				return _decimalPlaces;
-			}
-
+			get => _fixedDigits ? _decimalPlaces : 0;
 			set
 			{
-				if (TypeHelper<TNum>.Info.IsWholeNumber)
-				{
-					_decimalPlaces = 0;
-				}
+				if (_fixedDigits & _numTypeIsFloating)
+					value = Math.Abs(value);
 				else
-				{
-					_decimalPlaces = value;
-				}
+					value = 0;
+				_decimalPlaces = value;
+				_formatter.NumberDecimalDigits = value;
 			}
 		}
 
 		[Category("Behavior")]
 		[DefaultValue(false)]
-		public bool FixedNumberSize { get; set; }
+		public bool FixedNumberSize
+		{
+			get => _fixedDigits;
+			set
+			{
+				_fixedDigits = value;
+				DecimalPlaces = _decimalPlaces;
+			}
+		}
 
 		[XmlIgnore]
 		[Browsable(false)]
@@ -263,10 +367,11 @@ namespace Myra.Graphics2D.UI
 			Children.Add(_downButton);
 
 			SetStyle(styleName);
-			
-			Value = GenericMathExtra<TNum>.Zero;
-			Increment = GenericMathExtra<TNum>.One;
-			Mul_Increment = GenericMathExtra<TNum>.One;
+
+			_formatter = new NumberFormatInfo();
+			Value = MathHelper<TNum>.Zero;
+			Increment = MathHelper<TNum>.One;
+			Mul_Increment = MathHelper<TNum>.One;
 		}
 
 		private static TNum? StringToNumber(string str)
@@ -284,31 +389,36 @@ namespace Myra.Graphics2D.UI
 			return null;
 		}
 
-		private string NumberToString(TNum? value)
+		private static string NumberToString(TNum? value, bool isNullable, NumberFormatInfo formatter)
 		{
+			if(formatter == null)
+				formatter = NumberFormatInfo.CurrentInfo;
+			
 			if (value.HasValue)
 			{
-				return value.Value.ToString();
+				TNum num = value.Value;
+				return _strConverter.Invoke(num, formatter);
 			}
 
-			if (Nullable)
+			if (isNullable)
 			{
 				return string.Empty;
 			}
-			// Default value
-			return "0";
+			return _defaultString; // Default value
 		}
 
 		private void _textField_ValueChanging(object sender, ValueChangingEventArgs<string> e)
 		{
-			var str = e.NewValue;
+			string str = e.NewValue;
 			if (string.IsNullOrEmpty(str))
 			{
+				return;
 			}
-			else if (str == "-")
+			
+			if (str == "-")
 			{
 				// Allow prefix 'minus' only if Minimum lower than zero
-				if (Minimum.HasValue && GenericMath.GreaterThanOrEqual(Minimum.Value, GenericMathExtra<TNum>.Zero))
+				if (Minimum.HasValue && MathHelper<TNum>.GreaterThanOrEqual(Minimum.Value, MathHelper<TNum>.Zero))
 				{
 					e.Cancel = true;
 				}
@@ -324,61 +434,19 @@ namespace Myra.Graphics2D.UI
 				{
 					e.Cancel = true;
 				}
-				/*
-				if (Integer)
+
+				if (ValueChanging == null)
+					return;
+				
+				var args = new ValueChangingEventArgs<TNum?>(Value, newValue);
+				ValueChanging.Invoke(this, args);
+				if (args.Cancel)
 				{
-					int i;
-					if (!int.TryParse(s, out i))
-					{
-						e.Cancel = true;
-					}
-					else
-					{
-						if ((Minimum != null && i < (int)Minimum) ||
-							(Maximum != null && i > (int)Maximum))
-						{
-							e.Cancel = true;
-						}
-						else
-						{
-							newValue = i;
-						}
-					}
+					e.Cancel = true;
 				}
 				else
 				{
-					float f;
-					if (!float.TryParse(s, out f))
-					{
-						e.Cancel = true;
-					}
-					else
-					{
-						if ((Minimum != null && f < Minimum) ||
-							(Maximum != null && f > Maximum))
-						{
-							e.Cancel = true;
-						}
-						else
-						{
-							newValue = f;
-						}
-					}
-				}*/
-
-				// Now SpinButton's 
-				if (ValueChanging != null)
-				{
-					var args = new ValueChangingEventArgs<TNum?>(Value, newValue);
-					ValueChanging.Invoke(this, args);
-					if (args.Cancel)
-					{
-						e.Cancel = true;
-					}
-					else
-					{
-						e.NewValue = args.NewValue.HasValue ? NumberToString(args.NewValue) : null;
-					}
+					e.NewValue = args.NewValue.HasValue ? NumberToString(args.NewValue, Nullable, _formatter) : null;
 				}
 			}
 		}
@@ -423,22 +491,22 @@ namespace Myra.Graphics2D.UI
 			TNum newValue, delta;
 			if (!TypeHelper<TNum>.TryParse(_textField.Text, out newValue))
 			{
-				newValue = GenericMathExtra<TNum>.Zero;
+				newValue = MathHelper<TNum>.Zero;
 			}
 
 			if (isMouseWheel)
-				delta = GenericMath<TNum>.Multiply(_increment, Mul_Increment);
+				delta = MathHelper<TNum>.Multiply(_increment, Mul_Increment);
 			else
 				delta = _increment;
 
 			if (spinUpward)
-				newValue = GenericMath<TNum>.Add(newValue, delta);
+				MathHelper<TNum>.Add(ref newValue, delta);
 			else
-				newValue = GenericMath<TNum>.Subtract(newValue, delta);
+				MathHelper<TNum>.Subtract(ref newValue, delta);
 
 			if (_range.IsInRange(newValue))
 			{
-				bool changed = GenericMath<TNum>.NotEqual(Value.GetValueOrDefault(), newValue);
+				bool changed = MathHelper<TNum>.NotEqual(Value.GetValueOrDefault(), newValue);
 				TNum? oldValue = Value;
 				Value = newValue;
 
@@ -480,17 +548,17 @@ namespace Myra.Graphics2D.UI
 
 			if (string.IsNullOrEmpty(_textField.Text) && !Nullable)
 			{
-				var defaultValue = "0";
-				if (Minimum.HasValue && GenericMath<TNum>.GreaterThan(Minimum.Value, GenericMathExtra<TNum>.Zero))
+				string textValue = _defaultString;
+				if (Minimum.HasValue && MathHelper<TNum>.GreaterThan(Minimum.Value, MathHelper<TNum>.Zero))
 				{
-					defaultValue = NumberToString(Minimum.Value);
+					textValue = NumberToString(Minimum.Value, Nullable, _formatter);
 				}
-				else if (Maximum.HasValue && GenericMath<TNum>.LessThan(Maximum.Value, GenericMathExtra<TNum>.Zero))
+				else if (Maximum.HasValue && MathHelper<TNum>.LessThan(Maximum.Value, MathHelper<TNum>.Zero))
 				{
-					defaultValue = NumberToString(Maximum.Value);
+					textValue = NumberToString(Maximum.Value, Nullable, _formatter);
 				}
 
-				_textField.Text = defaultValue;
+				_textField.Text = textValue;
 			}
 
 			_textField.OnLostKeyboardFocus();
@@ -506,8 +574,28 @@ namespace Myra.Graphics2D.UI
 		public override void OnChar(char c)
 		{
 			base.OnChar(c);
-
-			_textField.OnChar(c);
+			
+			const char sign = '-';
+			bool isNegSign = c == sign;
+			bool doPrint = false;
+			if (_numTypeHasSign)
+			{
+				if (isNegSign)
+				{
+					if (_textField.Text.Length == 0 || (_textField.CursorPosition == 0 && _textField.Text[0] != sign))
+						doPrint = true;
+				}
+				else
+					doPrint = true;
+			}
+			else
+			{
+				if (!isNegSign)
+					doPrint = true;
+			}
+			
+			if(doPrint)
+				_textField.OnChar(c);
 		}
 
 		protected internal override void CopyFrom(Widget w)

@@ -43,14 +43,28 @@ namespace Myra.Utility.Types
             set => _max = value;
         }
 
-        public bool IsInRange(TNum value)
+        public bool InsideMinBound(TNum value)
         {
-            if (_min.HasValue && GenericMath<TNum>.LessThan(value, _min.Value))
-                return false;
-            if (_max.HasValue && GenericMath<TNum>.GreaterThan(value, _max.Value))
+            if (_min.HasValue && MathHelper<TNum>.LessThan(value, _min.Value))
                 return false;
             return true;
         }
-        public TNum Clamp(TNum value) => GenericMathExtra<TNum>.Clamp(value, _min, _max);
+        public bool InsideMaxBound(TNum value)
+        {
+            if (_max.HasValue && MathHelper<TNum>.GreaterThan(value, _max.Value))
+                return false;
+            return true;
+        }
+        
+        public bool IsInRange(TNum value)
+        {
+            if (_min.HasValue && MathHelper<TNum>.LessThan(value, _min.Value))
+                return false;
+            if (_max.HasValue && MathHelper<TNum>.GreaterThan(value, _max.Value))
+                return false;
+            return true;
+        }
+        /// <inheritdoc cref="MathHelper{TNum}.Clamp(TNum, TNum?, TNum?)"/>
+        public TNum Clamp(TNum value) => MathHelper<TNum>.Clamp(value, _min, _max);
     }
 }

@@ -38,6 +38,7 @@ namespace Myra.Graphics2D.UI.Properties
         {
             if (Editors.TryGetEditorTypeForType(bindProperty.Type, out Type editorType))
             {
+                // TODO mayble cache a lookup of known constructor-info objects?
                 var ctor = editorType.GetConstructor(ActivatorTypeArgs);
                 if (ctor != null)
                 {
@@ -75,11 +76,16 @@ namespace Myra.Graphics2D.UI.Properties
         /// </summary>
         protected PropertyEditor(IInspector owner, Record methodInfo)
         {
+            if(methodInfo == null)
+                throw new NullReferenceException(nameof(methodInfo));
             _owner = owner;
             _record = methodInfo;
+            DoInit();
             if (TryCreateWidget(out Widget editor))
                 Widget = editor;
         }
+        private void DoInit() => Initialize();
+        protected virtual void Initialize() { }
 
         private bool TryCreateWidget(out Widget widget) => TryCreateEditorWidget(out widget);
         protected abstract bool TryCreateEditorWidget(out Widget widget);

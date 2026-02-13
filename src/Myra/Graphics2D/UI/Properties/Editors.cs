@@ -34,7 +34,7 @@ namespace Myra.Graphics2D.UI.Properties
                     return true;
                 }
             }
-            
+            /*
             string str = EditorTypeRegistry.TypeToString(propertyKind);
             foreach (EditorTypeRegistry reg in _registry)
             {
@@ -50,7 +50,7 @@ namespace Myra.Graphics2D.UI.Properties
                     }
                     return true;
                 }
-            }
+            }*/
             
             //typeof(IList).IsAssignableFrom(propertyKind)
             editorType = null;

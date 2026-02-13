@@ -31,7 +31,6 @@ namespace Myra.Samples.Inspector
 		public InspectGame()
 		{
 			Instance = this;
-
 #if !STRIDE
 			_graphics = new GraphicsDeviceManager(this)
 			{
