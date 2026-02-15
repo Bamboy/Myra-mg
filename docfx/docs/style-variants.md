@@ -16,7 +16,7 @@ In order to create button with default style, simply call its constructor withou
     Text = "My button"
   };
 ```
-Or through [[MML]]:
+Or through [MML](MML.md):
 ```xml
   <TextButton Text="My button"/>
 ```
@@ -28,7 +28,7 @@ In order to create button with named style, pass it to constructor. I.e.
     Text = "My button"
   };
 ```
-Or pass it to StyleName property when using [[MML]]:
+Or pass it to StyleName property when using [MML](MML.md):
 ```xml
   <TextButton StyleName="blue" Text="My button"/>
 ```

@@ -1,6 +1,6 @@
 MML(Myra Markup Language) is XML based declarative language to describe UI.
 
-I.e. following MML is equivalent to the UI from [[Quick Start Tutorial]]:
+I.e. following MML is equivalent to the UI from [Getting Started](../index.md):
 ```xml
 <Project>
   <Project.ExportOptions />

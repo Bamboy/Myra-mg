@@ -19,7 +19,7 @@ I.e. following code sets SolidBrush as widget.Background:
   widget.Background = new SolidBrush("#808000FF"); // SolidBrush from RGBA string
   widget.Background = new SolidBrush("#FFA500"); // SolidBrush from RGB string
 ```
-Also it could be set through [[MML]].
+Also it could be set through [MML](MML.md).
 
 I.e. following MML:
 ```xml

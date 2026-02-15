@@ -1,4 +1,4 @@
-MyraPad is WYSIWYG [[MML]] based UI designer.
+MyraPad is WYSIWYG [MML](MML.md) based UI designer.
 
 ![alt text](~/images/MyraPad.png)
 
@@ -7,7 +7,7 @@ It is included in the Myra binary distribution, which is Myra.v.v.v.v.zip from t
 Following video demonstrates creation of simple main menu project in MyraPad:
 https://youtu.be/NZUCq2RMgZU
 
-It creates UI with the following [[MML]]:
+It creates UI with the following [MML](MML.md):
 ```xml
 <Project>
   <Panel>

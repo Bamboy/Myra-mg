@@ -1,5 +1,5 @@
 ## Label
-Label is the most basic widget that displays text. It supports [[Rich Text]].
+Label is the most basic widget that displays text. It supports [Rich Text](rich-text.md).
 
 Example code:
 ```c#

@@ -31,7 +31,7 @@ Consider following code:
     childPanel.Widgets.Add(label1);
     topPanel.Widgets.Add(childPanel);
 ```
-It would be equivalent to following [[MML]]:
+It would be equivalent to following [MML](MML.md):
 ```xml
     <Project>
       <Panel Background="#ADD8E6FF">

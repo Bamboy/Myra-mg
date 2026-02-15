@@ -22,7 +22,7 @@ I.e. following code creates and show simple window with button inside:
 
     window.ShowModal(_desktop);
 ```
-It is equivalent to the [[MML]]:
+It is equivalent to the [MML](MML.md):
 ```xml
     <Project>
       <Project.ExportOptions Namespace="Test" Class="Test" OutputPath="D:\Temp" />
@@ -74,7 +74,7 @@ Following code creates simple "Enter Your Name" dialog:
 
     dialog.ShowModal(_desktop);
 ```
-It is equivalent to the following [[MML]]:
+It is equivalent to the following [MML](MML.md):
 ```xml
 <Project>
   <Project.ExportOptions />

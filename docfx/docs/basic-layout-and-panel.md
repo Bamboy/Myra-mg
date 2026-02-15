@@ -6,7 +6,7 @@ Name|Type|Default|Description
 Left/Top|int|0|X/Y Addition
 Width/Height|int?|null|Width/Height of the widget, if set to null, then it is automatically calculated
 HorizontalAlignment/VerticalAlignment|enum|Depends on a widget, it's either Stretch or Left/Top|How control is horizontally/vertically aligned in the container
-Margin/Border/Padding|Thickness||[[Margin, Border, Padding]]
+Margin/Border/Padding|Thickness||[Margin, Border, Padding](margin-border-padding.md)
 
 **Note**. Properties which names start with 'Grid' are used only in the Grid container.
 
@@ -41,7 +41,7 @@ Panel is simple container. Following code demonstrates usage of layout propertie
     panel.Widgets.Add(fixedSizeButton);
 ```
 
-It is equivalent to the following [[MML]]:
+It is equivalent to the following [MML](MML.md):
 ```xml
 <Project>
   <Panel>

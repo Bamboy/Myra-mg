@@ -21,7 +21,7 @@ I.e. following code layouts 3 widgets in one line:
 
     horizontalStackPanel.Widgets.Add(checkStackPanel1);
 ```
-It is equivalent to the following [[MML]]:
+It is equivalent to the following [MML](MML.md):
 ```xml
     <Project>
       <HorizontalStackPanel ShowGridLines="True" Spacing="8">
@@ -62,7 +62,7 @@ I.e. following code will make 2nd widget fill all available height:
     checkStackPanel1.Text = "Third Checkbox";
     verticalStackPanel.Widgets.Add(checkStackPanel1);
 ```
-It is equivalent to the following [[MML]]:
+It is equivalent to the following [MML](MML.md):
 ```xml
 <Project>
   <Project.ExportOptions />
