@@ -102,7 +102,7 @@ namespace Myra.Graphics2D
 		private bool _beginCalled;
 		private Rectangle _scissor;
 		private TextureFiltering _textureFiltering = TextureFiltering.Nearest;
-		public Transform Transform; 
+		public Transform Transform;
 		public Matrix? TransformMatrix { get; set; }
 
 #if MONOGAME
@@ -464,7 +464,7 @@ namespace Myra.Graphics2D
 
 		public void Begin()
 		{
-#if MONOGAME || FNA
+#if MONOGAME
 			var samplerState = SelectedSamplerState();
 
 			_renderer.Begin(SpriteSortMode.Deferred,
@@ -474,6 +474,16 @@ namespace Myra.Graphics2D
 				UIRasterizerState,
 				null,
                 TransformMatrix);
+#elif FNA
+			var samplerState = SelectedSamplerState();
+
+			_renderer.Begin(SpriteSortMode.Deferred,
+				BlendState.AlphaBlend,
+				samplerState,
+				null,
+				UIRasterizerState,
+				null,
+				TransformMatrix ?? Matrix.Identity);
 #elif STRIDE
 			var samplerState = SelectedSamplerState();
 
@@ -487,7 +497,7 @@ namespace Myra.Graphics2D
 			_renderer.Begin(_textureFiltering);
 #endif
 
-            _beginCalled = true;
+			_beginCalled = true;
 		}
 
 #if MONOGAME || FNA
