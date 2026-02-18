@@ -18,8 +18,14 @@ using Myra.Platform;
 
 namespace Myra.Graphics2D.UI
 {
+	/// <summary>
+	/// An UI element that edits a numeric data type <paramref name="TNum"/>, with up and down buttons.
+	/// </summary>
+	/// <typeparam name="TNum">The standard number-based value type to hold.</typeparam>
+	/// <exception cref="TypeLoadException">Generic <typeparamref name="TNum"/> cannot be <see cref="byte"/> or <see cref="sbyte"/> as they lack math operators and cannot be used.<para/>OR an unknown type was provided.</exception>
 	public class SpinButton<TNum> : Widget where TNum : struct
 	{
+#region Statics
 		private const string DefaultStringWhole = "0";
 		private const string DefaultStringFloat = "0.0";
 		private static readonly bool _numTypeHasSign;
@@ -32,7 +38,7 @@ namespace Myra.Graphics2D.UI
 			Type arg = typeof(TNum); //Validate generic arg
 			if (arg == typeof(byte) || arg == typeof(sbyte))
 			{
-				throw new ArgumentException($"Invalid Generic-Type Argument: '{arg}' does not have full math support. Convert to another type first");
+				throw new TypeLoadException($"Invalid Generic-Type Argument: '{arg}' does not have full math support. Convert to another type first");
 			}
 
 			TypeInfo info = TypeHelper<TNum>.Info;
@@ -123,10 +129,10 @@ namespace Myra.Graphics2D.UI
 					break;
 
 				default:
-					throw new TypeAccessException();
+					throw new TypeLoadException($"Unknown generic numerical type: {arg}");
 			}
 		}
-		
+#endregion
 		private readonly GridLayout _layout = new GridLayout();
 		private readonly TextBox _textField;
 		private readonly Button _upButton;
