@@ -20,7 +20,15 @@ namespace Myra.Graphics2D
 
 		public Matrix Matrix;
 
-		public Transform(Vector2 offset, Vector2 origin, Vector2 scale, float rotation)
+        public Transform(Matrix newMatrix, Vector2 scale, float rotation)
+        {
+            Matrix = newMatrix;
+
+            Scale = scale;
+            Rotation = rotation;
+        }
+
+        public Transform(Vector2 offset, Vector2 origin, Vector2 scale, float rotation)
 		{
 			Matrix newMatrix;
 			BuildTransform(offset, origin, scale, rotation, out newMatrix);

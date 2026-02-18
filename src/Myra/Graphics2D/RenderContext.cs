@@ -20,6 +20,10 @@ using Texture2D = System.Object;
 using Color = FontStashSharp.FSColor;
 #endif
 
+#if PLATFORM_AGNOSTIC
+using Matrix = System.Numerics.Matrix3x2;
+#endif
+
 namespace Myra.Graphics2D
 {
 	public enum TextureFiltering
@@ -98,9 +102,11 @@ namespace Myra.Graphics2D
 		private bool _beginCalled;
 		private Rectangle _scissor;
 		private TextureFiltering _textureFiltering = TextureFiltering.Nearest;
-		public Transform Transform;
+		public Transform Transform; 
+		public Matrix? TransformMatrix { get; set; }
+
 #if MONOGAME
-		private bool _isAnisotropicFilteringOn;
+        private bool _isAnisotropicFilteringOn;
 #endif
 
 		internal Rectangle DeviceScissor
@@ -466,7 +472,8 @@ namespace Myra.Graphics2D
 				samplerState,
 				null,
 				UIRasterizerState,
-				null);
+				null,
+                TransformMatrix);
 #elif STRIDE
 			var samplerState = SelectedSamplerState();
 
@@ -480,7 +487,7 @@ namespace Myra.Graphics2D
 			_renderer.Begin(_textureFiltering);
 #endif
 
-			_beginCalled = true;
+            _beginCalled = true;
 		}
 
 #if MONOGAME || FNA
