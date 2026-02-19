@@ -21,6 +21,7 @@ using Myra.MML;
 using System.Reflection;
 using Myra.Attributes;
 using System.Collections;
+using System.Collections.ObjectModel;
 using System.Xml.Linq;
 using System.Xml;
 
@@ -37,7 +38,7 @@ namespace MyraPad.UI
 		private static readonly string[] SimpleWidgets = new[]
 		{
 			"ImageTextButton",
-			"SpinButton",
+			"SpinButton<>",
 			"HorizontalProgressBar",
 			"VerticalProgressBar",
 			"HorizontalSeparator",
@@ -74,6 +75,12 @@ namespace MyraPad.UI
 			"VerticalMenu",
 			"TabControl",
 		};
+
+		private static readonly ReadOnlyDictionary<string, string[]> GenericTypesLookup = //TODO use this for type lookup in auto-predict
+			new ReadOnlyDictionary<string, string[]>(new Dictionary<string, string[]>
+		{	// The first entry is always used as a default.
+			{"SpinButton<>", new []{"Single", "Double", "Decimal", "Int16", "Int32", "Int64", "UInt16", "UInt32", "UInt64"}} 
+		});
 
 		private static readonly Regex TagResolver = new Regex("<([A-Za-z0-9\\.]+)");
 
@@ -1000,81 +1007,96 @@ namespace MyraPad.UI
 					all = (from a in all where a.StartsWith(typed, StringComparison.OrdinalIgnoreCase) select a).ToList();
 				}
 
-				if (all.Count > 0)
+				if (all.Count <= 0)
+					return;
+				
+				var lastStartPos = _currentTagStart.Value;
+				var lastEndPos = cursorPos;
+				// Build context menu
+				_autoCompleteMenu = new VerticalMenu();
+				foreach (string item in all)
 				{
-					var lastStartPos = _currentTagStart.Value;
-					var lastEndPos = cursorPos;
-					// Build context menu
-					_autoCompleteMenu = new VerticalMenu();
-					foreach (var a in all)
+					var menuItem = new MenuItem
 					{
-						var menuItem = new MenuItem
-						{
-							Text = a
-						};
+						Text = item,
+					};
 
-						menuItem.Selected += (s, args) =>
-						{
-							var result = "<" + menuItem.Text;
-							var skip = result.Length;
-							var needsClose = false;
-
-							if (SimpleWidgets.Contains(menuItem.Text) ||
-								Project.IsProportionName(menuItem.Text) ||
-								menuItem.Text == MenuItemName ||
-								menuItem.Text == ListItemName)
-							{
-								result += "/>";
-								skip += 2;
-							}
-							else
-							{
-								result += ">";
-								++skip;
-
-								if (Options.AutoIndent && Options.IndentSpacesSize > 0)
-								{
-									// Indent before cursor pos
-									result += "\n";
-									var indentSize = Options.IndentSpacesSize * (_indentLevel + 1);
-									result += new string(' ', indentSize);
-									skip += indentSize;
-
-									// Indent before closing tag
-									result += "\n";
-									indentSize = Options.IndentSpacesSize * _indentLevel;
-									result += new string(' ', indentSize);
-								}
-								result += "</" + menuItem.Text + ">";
-								++skip;
-								needsClose = true;
-							}
-
-							_textSource.Replace(lastStartPos, lastEndPos - lastStartPos, result);
-							_textSource.CursorPosition = lastStartPos + skip;
-							if (needsClose)
-							{
-								//								_textSource.OnKeyDown(Keys.Enter);
-							}
-						};
-
-						_autoCompleteMenu.Items.Add(menuItem);
-					}
-
-					var screen = _textSource.ToGlobal(_textSource.CursorCoords);
-					screen.Y += _textSource.Font.LineHeight;
-
-					if (_autoCompleteMenu.Items.Count > 0)
+					menuItem.Selected += (s, args) =>
 					{
-						_autoCompleteMenu.HoverIndex = 0;
-					}
+						int skip;
+						bool needsClose = false;
+						string result = "<";
+						if (menuItem.Text.EndsWith("<>")) // Is generic?
+						{
+							const char quote = '"';
+							// Remove the <> from the item name, while also appending GenericTypeArg="Type"
+							if (GenericTypesLookup.TryGetValue(menuItem.Text, out var strs))
+							{
+								result += menuItem.Text.Replace("<>", $" {Project.GenericTypeArgName}={quote}{strs[0]}{quote}");
+							}
+							skip = result.Length;
+						}
+						else
+						{
+							result += menuItem.Text;
+							skip = result.Length;
+						}
+						
+						if (SimpleWidgets.Contains(menuItem.Text) ||
+						    Project.IsProportionName(menuItem.Text) ||
+						    menuItem.Text == MenuItemName ||
+						    menuItem.Text == ListItemName)
+						{
+							result += "/>";
+							skip += 2;
+						}
+						else
+						{
+							result += ">";
+							++skip;
 
-					Desktop.ShowContextMenu(_autoCompleteMenu, screen);
-					// Keep focus at text field
-					Desktop.FocusedKeyboardWidget = _textSource;
+							if (Options.AutoIndent && Options.IndentSpacesSize > 0)
+							{
+								// Indent before cursor pos
+								result += "\n";
+								var indentSize = Options.IndentSpacesSize * (_indentLevel + 1);
+								result += new string(' ', indentSize);
+								skip += indentSize;
 
-					_refreshInitiated = null;
+								// Indent before closing tag
+								result += "\n";
+								indentSize = Options.IndentSpacesSize * _indentLevel;
+								result += new string(' ', indentSize);
+							}
+							result += "</" + menuItem.Text + ">";
+							++skip;
+							needsClose = true;
+						}
+
+						_textSource.Replace(lastStartPos, lastEndPos - lastStartPos, result);
+						_textSource.CursorPosition = lastStartPos + skip;
+						if (needsClose)
+						{
+							//								_textSource.OnKeyDown(Keys.Enter);
+						}
+					};
+
+					_autoCompleteMenu.Items.Add(menuItem);
 				}
+
+				var screen = _textSource.ToGlobal(_textSource.CursorCoords);
+				screen.Y += _textSource.Font.LineHeight;
+
+				if (_autoCompleteMenu.Items.Count > 0)
+				{
+					_autoCompleteMenu.HoverIndex = 0;
+				}
+
+				Desktop.ShowContextMenu(_autoCompleteMenu, screen);
+				// Keep focus at text field
+				Desktop.FocusedKeyboardWidget = _textSource;
+
+				_refreshInitiated = null;
 			}
 		}
 

@@ -66,7 +66,7 @@ namespace Myra.Graphics2D.UI
 		public const string DefaultColumnProportionName = "DefaultColumnProportion";
 		public const string DefaultRowProportionName = "DefaultRowProportion";
 		
-		internal const string GenericTypeArgName = "GenericTypeArg";
+		public const string GenericTypeArgName = "GenericTypeArg";
 		internal const char LegacySeparator = ':';
 		internal const string LegacyClassToGeneric = "TO_GENERIC";
 		internal const string LegacyToGenericDefaultType = "DEFAULT_TYPE";
