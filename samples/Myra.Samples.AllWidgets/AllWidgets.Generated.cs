@@ -272,7 +272,7 @@ namespace Myra.Samples.AllWidgets
 			label16.Text = "Spin Button:";
 			Grid.SetRow(label16, 9);
 
-			var spinButton1 = new SpinButton();
+			var spinButton1 = new SpinButton<float>();
 			spinButton1.Value = 1;
 			spinButton1.Width = 100;
 			Grid.SetColumn(spinButton1, 1);

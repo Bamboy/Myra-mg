@@ -22,7 +22,7 @@ using Color = FontStashSharp.FSColor;
 
 namespace Myra.MML
 {
-	internal class LoadContext: BaseContext
+	internal class LoadContext : BaseContext
 	{
 		struct SimplePropertyInfo
 		{
@@ -83,9 +83,9 @@ namespace Myra.MML
 
 			List<PropertyInfo> complexProperties, simpleProperties;
 			ParseProperties(type, false, out complexProperties, out simpleProperties);
-
+			
 			string newName;
-			foreach (var attr in el.Attributes())
+			foreach (XAttribute attr in el.Attributes())
 			{
 				var propertyName = attr.Name.ToString();
 				if (LegacyPropertyNames != null && LegacyPropertyNames.TryGetValue(propertyName, out newName))
@@ -217,14 +217,13 @@ namespace Myra.MML
 				}
 			}
 			
-
 			var contentProperty = (from p in complexProperties
-								   where p.FindAttribute<ContentAttribute>() 
-								   != null select p).FirstOrDefault();
+								   where p.FindAttribute<ContentAttribute>() != null 
+								   select p).FirstOrDefault();
 
-			foreach (var child in el.Elements())
+			foreach (XElement child in el.Elements())
 			{
-				var childName = child.Name.ToString();
+				string childName = child.Name.ToString();
 				if (NodesToIgnore != null && NodesToIgnore.Contains(childName))
 				{
 					continue;
@@ -309,27 +308,54 @@ namespace Myra.MML
 					}
 
 					// Should be widget class name then
-					var widgetName = childName;
-					if (LegacyClassNames != null && LegacyClassNames.TryGetValue(widgetName, out newName))
+					string widgetName = childName;
+					bool isGeneric = childName.EndsWith("<>");
+					string genericTypeArg = null;
+					if (LegacyClassNames != null && LegacyClassNames.TryGetValue(widgetName, out string replace))
 					{
-						widgetName = newName;
-					}
-
-					Type itemType = null;
-					foreach (var pair in Assemblies)
-					{
-						foreach (var ns in pair.Value)
+						if (replace.StartsWith(Project.LegacyClassToGeneric))
 						{
-							var widgetType = pair.Key.GetType(ns + "." + widgetName);
-							if (widgetType != null)
+							string[] split = replace.Split(new char[]{ Project.LegacySeparator }, StringSplitOptions.RemoveEmptyEntries);
+							isGeneric = split[1].EndsWith("<>");
+							if (isGeneric)
 							{
-								itemType = widgetType;
-								break;
+								XAttribute attr = child.Attribute(Project.GenericTypeArgName);
+								if (attr != null)
+									genericTypeArg = attr.Value;
+								else
+								{
+									for (int i = 0; i < split.Length - 1; i++)
+									{
+										if (split[i] == Project.LegacyToGenericDefaultType)
+											genericTypeArg = split[i + 1]; //Set a default fallback type arg (LEGACY)
+									}
+								}
+								widgetName = split[1].Replace("<>", "`1");
 							}
 						}
+						else
+						{
+							widgetName = replace;
+						}
+					}
+					
+					Type itemType;
+					if (isGeneric)
+					{
+						if (!TryResolveType(widgetName, out itemType))
+						{
+							throw new Exception($"Could not resolve open-generic type name: {widgetName}");
+						}
+						if (!TryResolveType(genericTypeArg, out Type genericArg))
+						{
+							throw new Exception($"Could not resolve generic argument type: {genericTypeArg} of {widgetName}");
+						}
 
-						if (itemType != null)
-							break;
+						itemType = itemType.MakeGenericType(genericArg);
+					}
+					else
+					{
+						TryResolveType(widgetName, out itemType);
 					}
 
 					if (itemType != null)
@@ -360,6 +386,24 @@ namespace Myra.MML
 					}
 				}
 			}
+		}
+
+		private bool TryResolveType(string typeName, out Type itemType)
+		{
+			itemType = null;
+			foreach (var pair in Assemblies)
+			{
+				foreach (var ns in pair.Value)
+				{
+					var type = pair.Key.GetType(ns + "." + typeName);
+					if (type != null)
+					{
+						itemType = type;
+						return true;
+					}
+				}
+			}
+			return false;
 		}
 	}
 }

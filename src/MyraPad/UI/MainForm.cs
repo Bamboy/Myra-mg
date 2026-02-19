@@ -69,7 +69,7 @@ namespace MyraPad.UI
 		};
 
 		private static readonly string[] SpecialContainers = new[]
-{
+		{
 			"HorizontalMenu",
 			"VerticalMenu",
 			"TabControl",
