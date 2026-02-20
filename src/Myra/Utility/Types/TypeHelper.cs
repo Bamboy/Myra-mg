@@ -30,12 +30,21 @@ namespace Myra.Utility.Types
         }
         
         /// <summary>
-        /// If <typeparamref name="T"/> is <see cref="System.Nullable{}"/>, return the generic type the nullable holds, else return type <typeparamref name="T"/>.
+        /// If type is <see cref="System.Nullable{}"/>, return the generic type the nullable holds (T), else return type unchanged. Also returns boolean for if type was changed
         /// </summary>
-        public static void GetNullableTypeOrPassThrough(ref Type type)
+        public static bool GetNullableTypeOrPassThrough(ref Type type)
         {
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
-                type = type.GenericTypeArguments[0];
+            bool changed = false;
+            if (type.IsGenericType)
+            {
+                Type genericType = type.GetGenericTypeDefinition();
+                if (genericType == typeof(Nullable<>))
+                {
+                    type = type.GenericTypeArguments[0];
+                    changed = true;
+                }
+            }
+            return changed;
         }
     }
     

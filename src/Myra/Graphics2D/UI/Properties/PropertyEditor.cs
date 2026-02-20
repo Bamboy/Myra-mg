@@ -31,7 +31,7 @@ namespace Myra.Graphics2D.UI.Properties
         /// Initialize the <see cref="PropertyEditor"/>-<see cref="Type"/> relationship registry.
         /// </summary>
         /// <param name="predictedCount">Internal editor-array alloc size.</param>
-        /// <param name="fromAssemblies">The assemblies which are scanned for concrete inheritors of <see cref="PropertyEditor"/>. Null will scan all assemblies in the current <see cref="AppDomain"/>.</param>
+        /// <param name="fromAssemblies">The assemblies which are scanned for concrete inheritors of <see cref="PropertyEditor"/>. Any <see cref="PropertyEditor"/> without <see cref="PropertyEditorAttribute"/> are ignored. Null will scan all assemblies in the current <see cref="AppDomain"/>.</param>
         public static void InitializeRegistry(int predictedCount = 16, params System.Reflection.Assembly[] fromAssemblies)
             => Editors.InitializeRegistry(predictedCount, fromAssemblies);
         public static bool TryCreate(IInspector inspector, Record bindProperty, out PropertyEditor result)
@@ -63,38 +63,38 @@ namespace Myra.Graphics2D.UI.Properties
             return false;
         }
 #endregion
-        
         protected delegate bool WidgetCreatorDelegate(out Widget widget);
         
         protected readonly IInspector _owner;
         protected readonly Record _record;
         
-        public Widget Widget { get; protected set; }
+        public Type Type => _record.Type;
+        public Widget Widget { get; protected set; } //TODO this is never going to be needed with how this class is used
         
         /// <summary>
         /// Creates a new widget attached to the given Record
         /// </summary>
         protected PropertyEditor(IInspector owner, Record methodInfo)
         {
-            if(methodInfo == null)
-                throw new NullReferenceException(nameof(methodInfo));
             _owner = owner;
-            _record = methodInfo;
+            _record = methodInfo ?? throw new NullReferenceException(nameof(methodInfo));
             DoInit();
             if (TryCreateWidget(out Widget editor))
                 Widget = editor;
         }
+        
         private void DoInit() => Initialize();
         protected virtual void Initialize() { }
 
         private bool TryCreateWidget(out Widget widget) => TryCreateEditorWidget(out widget);
         protected abstract bool TryCreateEditorWidget(out Widget widget);
+        
         public void SetValue(object field, object value)
         {
             _record.SetValue(field, value);
             _owner.FireChanged(_record.Name);
         }
-        public Type Type => _record.Type;
+        
         object IRecordReference.GetValue(object field) => _record.GetValue(field);
         Record IRecordReference.Record => _record;
         bool IRecordReference.IsReadOnly => !_record.HasSetter;
@@ -103,9 +103,11 @@ namespace Myra.Graphics2D.UI.Properties
     /// <inheritdoc cref="PropertyEditor"/>
     public abstract class PropertyEditor<T> : PropertyEditor, IRecordReference<T>
     {
-        protected abstract bool CreatorPicker(out WidgetCreatorDelegate creatorDelegate);
+        protected PropertyEditor(IInspector owner, Record methodInfo) : base(owner, methodInfo)
+        {
+        }
         
-        protected override bool TryCreateEditorWidget(out Widget widget)
+        protected sealed override bool TryCreateEditorWidget(out Widget widget)
         {
             if (CreatorPicker(out var func))
                 return func.Invoke(out widget);
@@ -113,10 +115,7 @@ namespace Myra.Graphics2D.UI.Properties
             return false;
         }
         
-        protected PropertyEditor(IInspector owner, Record methodInfo) : base(owner, methodInfo)
-        {
-            
-        }
+        protected abstract bool CreatorPicker(out WidgetCreatorDelegate creatorDelegate);
         
         /// <summary>
         /// Gets the value from the field

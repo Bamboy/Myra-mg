@@ -2,7 +2,9 @@ using System;
 
 namespace Myra.Samples.Inspector
 {
-    // Caches complicated strings and only regenerates them on a dirty-pattern basis.
+    /// <summary>
+    /// Caches generated strings and only regenerates them on a dirty-pattern basis.
+    /// </summary>
     public class StringGenerator
     {
         private readonly Func<string> _textGenerator;
@@ -24,7 +26,7 @@ namespace Myra.Samples.Inspector
             _textGenerator = generator;
         }
             
-        public bool MarkDirty() => _isDirty = true;
+        public void MarkDirty() => _isDirty = true;
         private void Clean()
         {
             _isDirty = false;

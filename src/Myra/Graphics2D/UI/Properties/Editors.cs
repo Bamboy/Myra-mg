@@ -34,25 +34,7 @@ namespace Myra.Graphics2D.UI.Properties
                     return true;
                 }
             }
-            /*
-            string str = EditorTypeRegistry.TypeToString(propertyKind);
-            foreach (EditorTypeRegistry reg in _registry)
-            {
-                if (reg.CanEditType(str))
-                {
-                    if (reg.IsOpenGenericType)
-                    {
-                        editorType = reg.EditorType.MakeGenericType(propertyKind);
-                    }
-                    else
-                    {
-                        editorType = reg.EditorType;
-                    }
-                    return true;
-                }
-            }*/
-            
-            //typeof(IList).IsAssignableFrom(propertyKind)
+
             editorType = null;
             return false;
         }
@@ -100,6 +82,5 @@ namespace Myra.Graphics2D.UI.Properties
                 }
             }
         }
-        
     }
 }

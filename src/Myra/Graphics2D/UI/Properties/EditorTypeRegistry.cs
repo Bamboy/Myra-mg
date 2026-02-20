@@ -12,6 +12,10 @@ namespace Myra.Graphics2D.UI.Properties
         private readonly Type[] _types;
         private readonly string[] _typeNames;
         public Type EditorType => _editorType;
+        
+        /// <summary>
+        /// Return true if the editor type is Generic and not yet complete.
+        /// </summary>
         public bool IsOpenGenericType => _editorType.IsGenericTypeDefinition;
         
         public EditorTypeRegistry(Type editorType, params Type[] propertyTypes)
@@ -21,6 +25,10 @@ namespace Myra.Graphics2D.UI.Properties
             _typeNames = TypeToString(propertyTypes);
         }
 
+        /// <summary>
+        /// Returns true if this editor type can support <paramref name="type"/>.
+        /// </summary>
+        /// <param name="allowCasts">Allow casting <paramref name="type"/> to an intermediate type? (Like interfaces)</param>
         public bool CanEditType(Type type, bool allowCasts = true)
         {
             if (!allowCasts)

@@ -7,13 +7,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="FontStashSharp.Monogame" Version="1.5.2" />
         <PackageReference Include="MonoGame.Framework.DesktopGL" Version="$(AppMonoGameVersion)" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\Myra\Myra.MonoGame.csproj" />
-        <ReferencePathWithRefAssemblies Update="\home\bamboy\.nuget\packages\generic.math\1.0.2\lib\netstandard1.3\Generic.Math.dll" />
     </ItemGroup>
 
     <ItemGroup>

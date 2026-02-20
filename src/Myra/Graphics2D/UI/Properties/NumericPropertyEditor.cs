@@ -7,10 +7,6 @@ using Myra.Utility.Types;
 
 namespace Myra.Graphics2D.UI.Properties
 {
-	/// <summary>
-	/// <inheritdoc/>
-	/// </summary>
-	/// <typeparam name="TNum"></typeparam>
 	[PropertyEditor(typeof(NumericPropertyEditor<>), 
 		typeof(byte), typeof(sbyte), typeof(byte?), typeof(sbyte?),
 		typeof(short), typeof(ushort), typeof(short?), typeof(ushort?), 
@@ -18,30 +14,37 @@ namespace Myra.Graphics2D.UI.Properties
 		typeof(long), typeof(ulong), typeof(long?), typeof(ulong?),
 		typeof(float), typeof(float?), typeof(double), typeof(double?), 
 		typeof(decimal), typeof(decimal?))]
-	public sealed class NumericPropertyEditor<TNum> : PropertyEditor, INumberTypeRef<TNum> where TNum : struct
+	public sealed class NumericPropertyEditor<TNum> : PropertyEditor<TNum>, INumberTypeRef<TNum> where TNum : struct
 	{
-		private Type _type;
+		private Type _underlyingType;
 		private bool _nullable;
-		private bool _valueConvert;
-		
+		private bool _doByteDodge;
+		public bool IsNullable => _nullable;
 	    public NumericPropertyEditor(IInspector owner, Record methodInfo) : base(owner, methodInfo)
 	    {
 	    }
 	    protected override void Initialize()
 	    {
-		    _type = _record.Type;
-		    _nullable = _type.IsNullablePrimitive();
-
+		    _underlyingType = Type;
+		    _nullable = TypeHelper.GetNullableTypeOrPassThrough(ref _underlyingType);
+		    _doByteDodge = _underlyingType == typeof(byte) | _underlyingType == typeof(sbyte);
+		    
 		    Type selfType = typeof(TNum);
-		    _valueConvert = _type == typeof(byte) | _type == typeof(sbyte) | _type == typeof(byte?) | _type == typeof(sbyte?);
-		    _valueConvert |= selfType == typeof(byte) | selfType == typeof(sbyte) | selfType == typeof(byte?) | selfType == typeof(sbyte?);
-	    }
-
-	    protected override bool TryCreateEditorWidget(out Widget widget)
-	    {
-		    return CreateNumericEditor(out widget);
+		    Type copy = selfType;
+		    TypeHelper.GetNullableTypeOrPassThrough(ref copy);
+		    if (_underlyingType != copy)
+			    throw new TypeLoadException($"Type mismatch: Generic type arg '{selfType}' is unequatable to assigned Record type '{Type}'");
+		    if (selfType.IsGenericType)
+			    throw new TypeLoadException($"Generic types are not a valid generic argument for this type: {selfType}");
+		    if (Type.IsGenericType && Type.GetGenericTypeDefinition() != typeof(Nullable<>))
+			    throw new TypeLoadException($"Record provided is a generic but not Nullable: {Type}");
 	    }
 	    
+	    protected override bool CreatorPicker(out WidgetCreatorDelegate creatorDelegate)
+	    {
+		    creatorDelegate = CreateNumericEditor;
+		    return true;
+	    }
 	    private bool CreateNumericEditor(out Widget widget)
         {
 	        if (_owner.SelectedField == null)
@@ -64,7 +67,7 @@ namespace Myra.Graphics2D.UI.Properties
 			        convert = (TNum)obj;
 	        }
 
-	        if (_valueConvert)
+	        if (_doByteDodge)
 	        {
 		        widget = CreateByteDodge(convert);
 	        }
@@ -117,7 +120,7 @@ namespace Myra.Graphics2D.UI.Properties
 	        var spinButton = new SpinButton<short>()
 	        {
 		        Nullable = _nullable,
-		        Value = GenericMath<TNum?, short>.Convert(val),
+		        Value = GenericMath<TNum?, short?>.Convert(val),
 		        Minimum = 0,
 		        Maximum = 255,
 	        };
@@ -163,9 +166,5 @@ namespace Myra.Graphics2D.UI.Properties
 	        }
 	        return spinButton;
         }
-        
-	    public TNum GetValue(object field) => (TNum)_record.GetValue(field);
-	    public void SetValue(object field, TNum value) => base.SetValue(field, value);
-	    public bool IsNullable => _nullable;
     }
 }

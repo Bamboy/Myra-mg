@@ -8,6 +8,7 @@ using Myra.Graphics2D.UI.Properties;
 
 namespace Myra.Samples.Inspector
 {
+    // All the widgets for this sample project are children of this Widget.
     public class RootWidgets : HorizontalStackPanel
     {
         private Label headerLabel;
@@ -15,7 +16,7 @@ namespace Myra.Samples.Inspector
         private PropertyGrid propertyGrid;
 
         private bool _init;
-        private int sel_i, inf_i;
+        private int select_index, info_index;
         public readonly List<object> inspectables;
         public readonly List<StringGenerator> infos;
         private readonly StringGenerator headerInfo;
@@ -28,25 +29,32 @@ namespace Myra.Samples.Inspector
             infos = BuildInfoGenerators();
             headerInfo = new StringGenerator(() =>
             {
-                Type inspectedType = inspectables[sel_i].GetType();
-                return $"\nInspecting object [{sel_i+1}] of [{inspectables.Count}]:\n\nType: {inspectedType.Name}\nin: {inspectedType.Namespace}\nBaseType: {inspectedType.BaseType?.Name}\n\nAssembly:\n{inspectedType.Assembly.GetName().Name}\n";
+                Type inspectedType = inspectables[select_index].GetType();
+                return $"\nInspecting object [{select_index+1}] of [{inspectables.Count}]:\n\nType: {inspectedType.Name}\nin: {inspectedType.Namespace}\nBaseType: {inspectedType.BaseType?.Name}\n\nAssembly:\n{inspectedType.Assembly.GetName().Name}\n";
             });
             
             Inspect(inspectables[0]);
         }
 
+        /// <summary>
+        /// Build the list of objects whose properties can be viewed
+        /// </summary>
         private List<object> BuildInspectables()
         {
             return new List<object>()
             {
                 new SomeTypesInAClass(),
                 new SomeNumerics(),
+                new SomeNullableNumerics(),
                 this,
                 propertyGrid,
                 InspectGame.Instance
             };
         }
 
+        /// <summary>
+        /// Build the list of info-outputs which generate strings
+        /// </summary>
         private List<StringGenerator> BuildInfoGenerators()
         {
             return new List<StringGenerator>()
@@ -130,20 +138,20 @@ namespace Myra.Samples.Inspector
 
         public void SetSelectedIndex(int index)
         {
-            sel_i = index;
+            select_index = index;
             propertyGrid.Object = inspectables[index];
             headerInfo.MarkDirty();
         }
         public void SetInfoIndex(int index)
         {
-            inf_i = index;
-            infos[inf_i].MarkDirty();
+            info_index = index;
+            infos[info_index].MarkDirty();
         }
         
         public void OnPreRender()
         {
             headerLabel.Text = headerInfo.Text;
-            infoLabel.Text = infos[inf_i].Text;
+            infoLabel.Text = infos[info_index].Text;
         }
         
     }
