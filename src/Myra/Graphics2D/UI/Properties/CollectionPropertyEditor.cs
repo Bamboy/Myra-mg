@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Myra.Graphics2D.UI.Properties
 {
-	//[PropertyEditor(typeof(CollectionPropertyEditor), typeof(IList))]
+	[PropertyEditor(typeof(CollectionPropertyEditor), typeof(IList))]
 	public class CollectionPropertyEditor : PropertyEditor<IList>
 	{
 		private readonly Type collectionKind;
@@ -79,6 +79,11 @@ namespace Myra.Graphics2D.UI.Properties
         private static void UpdateLabelCount(Label textBlock, int count)
         {
 	        textBlock.Text = string.Format("{0} Items", count);
+        }
+        
+        public override void SetWidgetValue(object value)
+        {
+	        Console.WriteLine("CollectionPropertyEditor SetWidgetValue Not implemented");
         }
 	}
 }

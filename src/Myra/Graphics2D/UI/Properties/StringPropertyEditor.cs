@@ -92,6 +92,15 @@ namespace Myra.Graphics2D.UI.Properties
             widget = tf;
             return true;
         }
+        
+        public override void SetWidgetValue(object value)
+        {
+            var tb = Widget as TextBox;
+            if (value == null)
+                tb.Text = string.Empty;
+            else if (value is string str)
+                tb.Text = str;
+        }
 
         /*
         private bool CreateTextBoxAsFilePath(Record record, out Widget widget)

@@ -4,7 +4,7 @@ using Myra.Utility.Types;
 namespace Myra.Graphics2D.UI.Properties
 {
     [PropertyEditor(typeof(BooleanPropertyEditor), typeof(bool))]
-    public sealed class BooleanPropertyEditor : PropertyEditor<bool>, IStructTypeRef<bool>
+    public sealed class BooleanPropertyEditor : StructPropertyEditor<bool>, IStructTypeRef<bool>
     {
         private readonly bool _hasSetter;
         private readonly bool _nullable;
@@ -30,21 +30,17 @@ namespace Myra.Graphics2D.UI.Properties
                 widget = null;
                 return false;
             }
-
-            var propertyType = _record.Type;
-            bool value = GetValue(_owner.SelectedField);
             
             var cb = new CheckButton
             {
-                IsChecked = value
+                IsChecked = GetValue(_owner.SelectedField)
             };
             
             if (_record.HasSetter)
             {
                 cb.Click += (sender, args) =>
                 {
-                    SetValue(_owner.SelectedField, cb.IsChecked);
-                    _owner.FireChanged(propertyType.Name);
+                    SetValue(_owner.SelectedField, !cb.IsChecked);
                 };
             }
             else
@@ -52,8 +48,16 @@ namespace Myra.Graphics2D.UI.Properties
                 cb.Enabled = false;
             }
 
-            widget = cb;
+            Widget = widget = cb;
             return true;
+        }
+        
+        public override void SetWidgetValue(bool? value)
+        {
+            var cb = Widget as CheckButton;
+            if (!_nullable && !value.HasValue)
+                value = false;
+            cb.IsChecked = value.Value;
         }
     }
 }

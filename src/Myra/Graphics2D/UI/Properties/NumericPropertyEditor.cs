@@ -14,7 +14,7 @@ namespace Myra.Graphics2D.UI.Properties
 		typeof(long), typeof(ulong), typeof(long?), typeof(ulong?),
 		typeof(float), typeof(float?), typeof(double), typeof(double?), 
 		typeof(decimal), typeof(decimal?))]
-	public sealed class NumericPropertyEditor<TNum> : PropertyEditor<TNum>, INumberTypeRef<TNum> where TNum : struct
+	public sealed class NumericPropertyEditor<TNum> : StructPropertyEditor<TNum>, INumberTypeRef<TNum> where TNum : struct
 	{
 		private Type _underlyingType;
 		private bool _nullable;
@@ -75,6 +75,8 @@ namespace Myra.Graphics2D.UI.Properties
 	        {
 		        widget = CreateNativeType(convert);
 	        }
+
+	        Widget = widget;
 	        return true;
         }
 
@@ -166,5 +168,24 @@ namespace Myra.Graphics2D.UI.Properties
 	        }
 	        return spinButton;
         }
-    }
+        
+        public override void SetWidgetValue(TNum? value)
+        {
+	        if (Widget is SpinButton<TNum> native)
+		        native.Value = value;
+	        else if(Widget is SpinButton<short> dodge)
+	        {
+		        short? val;
+		        if (!IsNullable && !value.HasValue)
+		        {
+			        val = 0;
+		        }
+		        else
+		        {
+			        val = GenericMath<TNum?, short?>.Convert(value);
+		        }
+		        dodge.Value = val;
+	        }
+        }
+	}
 }

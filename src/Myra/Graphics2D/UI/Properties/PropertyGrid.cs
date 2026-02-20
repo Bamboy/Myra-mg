@@ -34,12 +34,14 @@ namespace Myra.Graphics2D.UI.Properties
 	public partial class PropertyGrid : Widget, IInspector
 	{
 		private const string DefaultCategoryName = "Miscellaneous";
+		private const int ALLOC = 32;
 
 		private readonly GridLayout _layout = new GridLayout();
 		private readonly PropertyGrid _parentGrid;
-		private Record _parentProperty;
+		private readonly Record _parentProperty;
 		private readonly Dictionary<string, List<Record>> _records = new Dictionary<string, List<Record>>();
-		private List<Record> _recMemory = new List<Record>(32);
+		private readonly List<Record> _recMemory = new List<Record>(ALLOC);
+		private readonly List<PropertyEditor> _editors = new List<PropertyEditor>(ALLOC);
 		private readonly HashSet<string> _expandedCategories = new HashSet<string>();
 		private object _object;
 		private bool _ignoreCollections;
@@ -1023,6 +1025,7 @@ namespace Myra.Graphics2D.UI.Properties
 				
 				if (PropertyEditor.TryCreate(this, record, out PropertyEditor editor))
 				{
+					_editors.Add(editor);
 					valueWidget = editor.Widget;
 				}
 				
@@ -1202,6 +1205,7 @@ namespace Myra.Graphics2D.UI.Properties
 			_layout.RowsProportions.Clear();
 			Children.Clear();
 			_records.Clear();
+			_editors.Clear();
 			_expandedCategories.Clear();
 
 			if(!RecordAggregator(in _object, in _parentType, _recMemory, _doFancyLayout))
@@ -1382,6 +1386,15 @@ namespace Myra.Graphics2D.UI.Properties
 			ApplyWidgetStyle(style);
 
 			PropertyGridStyle = style;
+		}
+		
+		public override void InternalRender(RenderContext context)
+		{
+			foreach (var editor in _editors)
+			{
+				editor.UpdateDisplay();
+			}
+			base.InternalRender(context);
 		}
 	}
 }

@@ -4,9 +4,10 @@ using Myra.Graphics2D.UI.Styles;
 
 namespace Myra.Graphics2D.UI.Properties
 {
-    [PropertyEditor(typeof(ColorPropertyEditor), typeof(Color), typeof(Color?))]
-    public sealed class ColorPropertyEditor : PropertyEditor<Color>
+    [PropertyEditor(typeof(ColorPropertyEditor), typeof(Color))]
+    public sealed class ColorPropertyEditor : StructPropertyEditor<Color>
     {
+        private Image _colorDisplay;
         public ColorPropertyEditor(IInspector owner, Record methodInfo) : base(owner, methodInfo)
         {
 
@@ -58,7 +59,7 @@ namespace Myra.Graphics2D.UI.Properties
                 Height = 16,
                 Color = color
             };
-
+            _colorDisplay = image;
             subGrid.Widgets.Add(image);
 
             var button = new Button
@@ -107,6 +108,13 @@ namespace Myra.Graphics2D.UI.Properties
             }
 
             return true;
+        }
+        
+        public override void SetWidgetValue(Color? value)
+        {
+            if (!value.HasValue)
+                value = Color.Magenta;
+            _colorDisplay.Color = value.Value;
         }
     }
 }

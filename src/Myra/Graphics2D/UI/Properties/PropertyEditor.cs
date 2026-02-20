@@ -69,7 +69,7 @@ namespace Myra.Graphics2D.UI.Properties
         protected readonly Record _record;
         
         public Type Type => _record.Type;
-        public Widget Widget { get; protected set; } //TODO this is never going to be needed with how this class is used
+        public Widget Widget { get; protected set; }
         
         /// <summary>
         /// Creates a new widget attached to the given Record
@@ -94,7 +94,14 @@ namespace Myra.Graphics2D.UI.Properties
             _record.SetValue(field, value);
             _owner.FireChanged(_record.Name);
         }
-        
+        public abstract void SetWidgetValue(object value);
+        public void UpdateDisplay()
+        {
+            if(Widget.Desktop.FocusedKeyboardWidget == Widget)
+                return;
+            SetWidgetValue(_record.GetValue(_owner.SelectedField));
+        }
+
         object IRecordReference.GetValue(object field) => _record.GetValue(field);
         Record IRecordReference.Record => _record;
         bool IRecordReference.IsReadOnly => !_record.HasSetter;
@@ -135,5 +142,23 @@ namespace Myra.Graphics2D.UI.Properties
             _record.SetValue(field, value);
             _owner.FireChanged(_record.Name);
         }
+    }
+
+    public abstract class StructPropertyEditor<T> : PropertyEditor<T>, IStructTypeRef<T> where T : struct
+    {
+        private bool _nullable;
+        public bool IsNullable => _nullable;
+        
+        protected StructPropertyEditor(IInspector owner, Record methodInfo) : base(owner, methodInfo)
+        {
+        }
+        
+        public sealed override void SetWidgetValue(object value)
+        {
+            if(value is T kind)
+                SetWidgetValue(kind);
+        }
+
+        public abstract void SetWidgetValue(T? value);
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Xna.Framework;
 using FontStashSharp.RichText;
 using Myra.Graphics2D.Brushes;
@@ -101,6 +102,11 @@ namespace Myra.Graphics2D.UI.Properties
 
 			widget = subGrid;
 			return true;
+        }
+        
+        public override void SetWidgetValue(object value)
+        {
+	        Console.WriteLine("BrushPropertyEditor SetWidgetValue Not implemented");
         }
 	}
 }

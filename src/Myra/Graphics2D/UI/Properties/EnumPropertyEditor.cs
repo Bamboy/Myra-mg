@@ -1,17 +1,28 @@
 using System;
 using Myra.Utility;
+using Myra.Utility.Types;
 
 namespace Myra.Graphics2D.UI.Properties
 {
-    [PropertyEditor(typeof(EnumPropertyEditor), typeof(Enum))]
-    public sealed class EnumPropertyEditor : PropertyEditor<Enum>
+    [PropertyEditor(typeof(EnumPropertyEditor<>), typeof(Enum))]
+    public sealed class EnumPropertyEditor<TEnum> : StructPropertyEditor<TEnum> where TEnum : struct, Enum
     {
+        private Array _values;
+        private bool _nullable;
+        
         public EnumPropertyEditor(IInspector owner, Record methodInfo) : base(owner, methodInfo)
         {
             if (!methodInfo.Type.IsEnum)
                 throw new TypeLoadException($"Record is not an enum: {methodInfo.Type}");
         }
         
+        protected override void Initialize()
+        {
+            Type type = typeof(TEnum);
+            _nullable = TypeHelper.GetNullableTypeOrPassThrough(ref type);
+            _values = Enum.GetValues(type);
+        }
+
         protected override bool CreatorPicker(out WidgetCreatorDelegate creatorDelegate)
         {
             //TODO - support flags enums
@@ -27,24 +38,18 @@ namespace Myra.Graphics2D.UI.Properties
                 return false;
             }
             
-            var propertyType = _record.Type;
-            var value = _record.GetValue(_owner.SelectedField);
-
-            var isNullable = propertyType.IsNullableEnum();
-            var enumType = isNullable ? propertyType.GetNullableType() : propertyType;
-            var values = Enum.GetValues(enumType);
-
             var cv = new ComboView();
-
-            if (isNullable)
+            
+            if (_nullable)
             {
                 cv.Widgets.Add(new Label
                 {
-                    Text = string.Empty
+                    Text = string.Empty,
+                    Tag = null
                 });
             }
 
-            foreach (var v in values)
+            foreach (var v in _values)
             {
                 cv.Widgets.Add(new Label
                 {
@@ -53,8 +58,10 @@ namespace Myra.Graphics2D.UI.Properties
                 });
             }
 
-            var selectedIndex = Array.IndexOf(values, value);
-            if (isNullable)
+            object obj = _record.GetValue(_owner.SelectedField);
+            
+            int selectedIndex = Array.IndexOf(_values, obj);
+            if (_nullable)
             {
                 ++selectedIndex;
             }
@@ -77,6 +84,13 @@ namespace Myra.Graphics2D.UI.Properties
 
             widget = cv;
             return true;
+        }
+        
+        public override void SetWidgetValue(TEnum? value)
+        {
+            var cb = Widget as ComboView;
+            int i = Array.IndexOf(_values, value);
+            cb.SelectedIndex = i;
         }
     }
 }
