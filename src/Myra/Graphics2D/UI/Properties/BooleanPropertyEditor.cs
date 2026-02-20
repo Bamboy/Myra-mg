@@ -1,3 +1,4 @@
+using System;
 using Myra.Utility.Types;
 
 namespace Myra.Graphics2D.UI.Properties
@@ -5,9 +6,15 @@ namespace Myra.Graphics2D.UI.Properties
     [PropertyEditor(typeof(BooleanPropertyEditor), typeof(bool))]
     public sealed class BooleanPropertyEditor : PropertyEditor<bool>, IStructTypeRef<bool>
     {
+        private readonly bool _hasSetter;
+        private readonly bool _nullable;
+        public bool IsNullable => _nullable;
+        
         public BooleanPropertyEditor(IInspector owner, Record methodInfo) : base(owner, methodInfo)
         {
-            
+            Type type = methodInfo.Type;
+            _nullable = TypeHelper.GetNullableTypeOrPassThrough(ref type);
+            _hasSetter = methodInfo.HasSetter;
         }
         
         protected override bool CreatorPicker(out WidgetCreatorDelegate creatorDelegate)
@@ -48,7 +55,5 @@ namespace Myra.Graphics2D.UI.Properties
             widget = cb;
             return true;
         }
-
-        bool IStructTypeRef<bool>.IsNullable => false;
     }
 }

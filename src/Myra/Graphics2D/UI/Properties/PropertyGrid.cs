@@ -60,6 +60,7 @@ namespace Myra.Graphics2D.UI.Properties
 
 			set
 			{
+				// TODO send notification to active editors before 
 				if (value == _object)
 				{
 					return;

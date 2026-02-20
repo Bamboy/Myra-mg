@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Myra.Utility;
-using Myra.Utility.Types;
 
 namespace Myra.Graphics2D.UI.Properties
 {
@@ -11,6 +10,7 @@ namespace Myra.Graphics2D.UI.Properties
         private readonly Type _editorType;
         private readonly Type[] _types;
         private readonly string[] _typeNames;
+        private readonly Func<Type, bool> _extraTypeChecks;
         public Type EditorType => _editorType;
         
         /// <summary>
@@ -23,8 +23,17 @@ namespace Myra.Graphics2D.UI.Properties
             _editorType = editorType;
             _types = propertyTypes;
             _typeNames = TypeToString(propertyTypes);
-        }
 
+            if (propertyTypes.Length > 0 && propertyTypes[0] == typeof(Enum))
+            {
+                _extraTypeChecks = _enumCheck;
+            }
+            else
+            {
+                _extraTypeChecks = _falseCheck;
+            }
+        }
+        
         /// <summary>
         /// Returns true if this editor type can support <paramref name="type"/>.
         /// </summary>
@@ -35,21 +44,26 @@ namespace Myra.Graphics2D.UI.Properties
             {
                 for (int i = 0; i < _types.Length; i++)
                 {
-                    if (object.ReferenceEquals(_types[i], type))
+                    Type supported = _types[i];
+                    if (object.ReferenceEquals(supported, type))
                         return true;
                 }
                 return CanEditType( TypeToString(type) );
             }
-            
-            for (int i = 0; i < _types.Length; i++)
+            else
             {
-                Type supported = _types[i];
-                if (object.ReferenceEquals(supported, type))
-                    return true;
-                if (supported.IsInterface && supported.IsAssignableFrom(type))
-                    return true;
+                for (int i = 0; i < _types.Length; i++)
+                {
+                    Type supported = _types[i];
+                    if (object.ReferenceEquals(supported, type))
+                        return true;
+                    if (supported.IsInterface && supported.IsAssignableFrom(type))
+                        return true;
+                    if (_extraTypeChecks.Invoke(type))
+                        return true;
+                }
+                return CanEditType( TypeToString(type) );
             }
-            return CanEditType( TypeToString(type) );
         }
         public bool CanEditType(string value)
         {
@@ -75,5 +89,8 @@ namespace Myra.Graphics2D.UI.Properties
             }
             return result.ToArray();
         }
+        
+        private static bool _falseCheck(Type t) => false;
+        private static bool _enumCheck(Type t) => t.IsEnum;
     }
 }

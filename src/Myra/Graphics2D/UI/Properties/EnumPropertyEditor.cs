@@ -8,9 +8,10 @@ namespace Myra.Graphics2D.UI.Properties
     {
         public EnumPropertyEditor(IInspector owner, Record methodInfo) : base(owner, methodInfo)
         {
-
+            if (!methodInfo.Type.IsEnum)
+                throw new TypeLoadException($"Record is not an enum: {methodInfo.Type}");
         }
-                         
+        
         protected override bool CreatorPicker(out WidgetCreatorDelegate creatorDelegate)
         {
             //TODO - support flags enums

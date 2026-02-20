@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
+using Microsoft.Xna.Framework;
 using Myra.Graphics2D;
 using Myra.Graphics2D.UI;
 using Myra.Graphics2D.UI.Properties;
@@ -20,11 +21,14 @@ namespace Myra.Samples.Inspector
         public readonly List<object> inspectables;
         public readonly List<StringGenerator> infos;
         private readonly StringGenerator headerInfo;
+
+        private readonly SomeChangingValues _changingValues;
         
         public RootWidgets()
         {
             BuildUI();
-            
+
+            _changingValues = new SomeChangingValues();
             inspectables = BuildInspectables();
             infos = BuildInfoGenerators();
             headerInfo = new StringGenerator(() =>
@@ -46,6 +50,7 @@ namespace Myra.Samples.Inspector
                 new SomeTypesInAClass(),
                 new SomeNumerics(),
                 new SomeNullableNumerics(),
+                _changingValues,
                 this,
                 propertyGrid,
                 InspectGame.Instance
@@ -153,6 +158,10 @@ namespace Myra.Samples.Inspector
             headerLabel.Text = headerInfo.Text;
             infoLabel.Text = infos[info_index].Text;
         }
-        
+
+        public void Update(GameTime time)
+        {
+            _changingValues.Update(time);
+        }
     }
 }

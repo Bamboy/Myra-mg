@@ -94,6 +94,7 @@ namespace Myra.Samples.Inspector
 		{
 			base.Update(gameTime);
 			_input.Update(Keyboard.GetState());
+			_widgets.Update(gameTime);
 		}
 		
 		protected override void Draw(GameTime gameTime)

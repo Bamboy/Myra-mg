@@ -181,34 +181,23 @@ namespace Myra.Graphics2D.UI
 		{
 			get
 			{
-				if (string.IsNullOrEmpty(_textField.Text))
-				{
-					return Nullable ? default(TNum?) : MathHelper<TNum>.Zero;
-				}
-
-				if(TypeHelper<TNum>.TryParse(_textField.Text, out TNum result))
-				{
-					return result;
-				}
-
-				return null;
+				return StringToNumber(_textField.Text, Nullable);
 			}
 
 			set
 			{
 				if (!value.HasValue && !Nullable)
 				{
-					throw new Exception("Value can't be set null when Nullable is false");
+					value = default(TNum);
 				}
 
 				if (value.HasValue)
 				{
 					value = _range.Clamp(value.Value);
 				}
+
+				_textField.Text = NumberToString(value, Nullable, _formatter);
 				
-				_textField.Text = value.HasValue ? 
-					_strConverter.Invoke(value.Value, _formatter) : 
-					string.Empty;
 				/*
 				if (FixedNumberSize)
 				{
@@ -380,19 +369,16 @@ namespace Myra.Graphics2D.UI
 			Mul_Increment = MathHelper<TNum>.One;
 		}
 
-		private static TNum? StringToNumber(string str)
+		private static TNum? StringToNumber(string str, bool isNullable)
 		{
-			if (string.IsNullOrEmpty(str))
+			if (!string.IsNullOrEmpty(str))
 			{
-				return null;
+				if (TypeHelper<TNum>.TryParse(str, out TNum value))
+				{
+					return value;
+				}
 			}
-
-			if (TypeHelper<TNum>.TryParse(str, out TNum value))
-			{
-				return value;
-			}
-
-			return null;
+			return isNullable ? default(TNum?) : MathHelper<TNum>.Zero;
 		}
 
 		private static string NumberToString(TNum? value, bool isNullable, NumberFormatInfo formatter)
@@ -459,12 +445,12 @@ namespace Myra.Graphics2D.UI
 
 		private void TextBoxOnTextChanged(object sender, ValueChangedEventArgs<string> eventArgs)
 		{
-			ValueChanged?.Invoke(this, new ValueChangedEventArgs<TNum?>(StringToNumber(eventArgs.OldValue), StringToNumber(eventArgs.NewValue)));
+			ValueChanged?.Invoke(this, new ValueChangedEventArgs<TNum?>(StringToNumber(eventArgs.OldValue, Nullable), StringToNumber(eventArgs.NewValue, Nullable)));
 		}
 
 		private void TextBoxOnTextChangedByUser(object sender, ValueChangedEventArgs<string> eventArgs)
 		{
-			ValueChangedByUser?.Invoke(this, new ValueChangedEventArgs<TNum?>(StringToNumber(eventArgs.OldValue), StringToNumber(eventArgs.NewValue)));
+			ValueChangedByUser?.Invoke(this, new ValueChangedEventArgs<TNum?>(StringToNumber(eventArgs.OldValue, Nullable), StringToNumber(eventArgs.NewValue, Nullable)));
 		}
 
 		public void ApplySpinButtonStyle(SpinButtonStyle style)
