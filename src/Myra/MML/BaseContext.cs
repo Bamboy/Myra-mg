@@ -22,22 +22,6 @@ namespace Myra.MML
 	{
 		public const string IdName = "Id";
 
-		public static ITypeSerializer FindSerializer(Type type)
-		{
-			if (type.IsNullablePrimitive())
-			{
-				type = type.GetNullableType();
-			}
-
-			ITypeSerializer result;
-			if (Serialization._serializers.TryGetValue(type, out result))
-			{
-				return result;
-			}
-
-			return null;
-		}
-
 		protected static void ParseProperties(Type type, bool checkSkipSave,
 			out List<PropertyInfo> complexProperties, 
 			out List<PropertyInfo> simpleProperties)

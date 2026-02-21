@@ -1,12 +1,36 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Reflection;
 
 namespace Myra.Utility.Types
 {
     public static class TypeHelper
     {
+        private static readonly ReadOnlyCollection<KeyValuePair<string, string>> _typeKeywordPairs =
+            new ReadOnlyCollection<KeyValuePair<string, string>>(new List<KeyValuePair<string, string>>
+            {   //Key is DotNet, Value is C# keyword
+                new KeyValuePair<string, string>("Single",  "float"),
+                new KeyValuePair<string, string>("Double",  "double"),
+                new KeyValuePair<string, string>("Decimal", "decimal"),
+                
+                new KeyValuePair<string, string>("SByte",  "sbyte"),
+                new KeyValuePair<string, string>("Byte",   "byte"),
+                new KeyValuePair<string, string>("Int16",  "short"),
+                new KeyValuePair<string, string>("UInt16", "ushort"),
+                new KeyValuePair<string, string>("Int32",  "int"),
+                new KeyValuePair<string, string>("UInt32", "uint"),
+                new KeyValuePair<string, string>("Int64",  "long"),
+                new KeyValuePair<string, string>("UInt64", "ulong"),
+                
+                new KeyValuePair<string, string>("Boolean", "bool"),
+                new KeyValuePair<string, string>("Char",    "char"),
+                new KeyValuePair<string, string>("Object", "object"),
+                new KeyValuePair<string, string>("String", "string"),
+            });
         private static Dictionary<Type, Func<TypeInfo>> _lookup;
+        
         internal static void RegisterHelperForType<T>()
         {
             if(_lookup == null)
@@ -46,6 +70,106 @@ namespace Myra.Utility.Types
             }
             return changed;
         }
+#region Strings
+        private const string FrontendGeneric = "<>";
+        private const string BackendGeneric = "`1";
+        public static bool IsGenericTypeName(string str) => IsGenericTypeName_FrontEnd(str) || IsGenericTypeName_BackEnd(str);
+        /// <summary>
+        /// Returns if the string ends with a front-end C# generic pattern
+        /// </summary>
+        public static bool IsGenericTypeName_FrontEnd(string str) => str.EndsWith(FrontendGeneric);
+        /// <summary>
+        /// Returns if the string ends with a back-end C# generic pattern
+        /// </summary>
+        public static bool IsGenericTypeName_BackEnd(string str) => str.EndsWith(BackendGeneric);
+        public static void SwapGenericTypeNameFormat(ref string str)
+        {
+            if (IsGenericTypeName_FrontEnd(str))
+            {
+                str = str.Replace(FrontendGeneric, BackendGeneric);
+            }
+            else if (IsGenericTypeName_BackEnd(str))
+            {
+                str = str.Replace(BackendGeneric, FrontendGeneric);
+            }
+        }
+        public static bool MakeFancyGenericTypeName(Type forType, out string result, bool avoidInternalTypeNames = true)
+        {
+            if (forType.IsGenericType)
+            {
+                string genericArgName;
+                try
+                {
+                    genericArgName = forType.GetGenericArguments()[0].Name;
+                }
+                catch
+                {
+                    genericArgName = "?";
+                }
+                
+                // Assume that starting uppercase is an internal type name
+                if (avoidInternalTypeNames && char.IsUpper(genericArgName[0])) 
+                {
+                    NameSwap_DotNetToKeyword(ref genericArgName);
+                }
+                
+                result = forType.Name;
+                MakeFancyGenericTypeName(ref result, genericArgName);
+                return true;
+            }
+            result = null;
+            return false;
+        }
+        public static void MakeFancyGenericTypeName(ref string str, string genericTypeName)
+        {
+            if(!IsGenericTypeName_BackEnd(str))
+                return;
+            if (string.IsNullOrWhiteSpace(genericTypeName))
+                genericTypeName = string.Empty;
+            else if (genericTypeName.Contains(".")) //remove namespace
+                genericTypeName = genericTypeName.Split('.').Last();
+            
+            str = str.Replace(BackendGeneric, $"<{genericTypeName}>");
+        }
+
+        public static void StripGenericFromString(ref string str)
+        {
+            int subSplit;
+            if (IsGenericTypeName_BackEnd(str))
+            {
+                subSplit = str.IndexOf('`');
+                str = str.Substring(0, subSplit);
+            }
+            else if (IsGenericTypeName_FrontEnd(str))
+            {
+                subSplit = str.IndexOf('<');
+                str = str.Substring(0, subSplit);
+            }
+        }
+
+        public static void NameSwap_DotNetToKeyword(ref string str)
+        {
+            foreach (var pair in _typeKeywordPairs)
+            {
+                if (pair.Key == str)
+                {
+                    str = pair.Value;
+                    return;
+                }
+            }
+        }
+        public static void NameSwap_KeywordToDotNet(ref string str)
+        {
+            foreach (var pair in _typeKeywordPairs)
+            {
+                if (pair.Value == str)
+                {
+                    str = pair.Key;
+                    return;
+                }
+            }
+        }
+#endregion Strings
     }
     
     /// <summary>

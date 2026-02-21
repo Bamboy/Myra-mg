@@ -3,6 +3,7 @@ using System.Reflection;
 using Myra.Graphics2D;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using Myra.MML;
 using FontStashSharp.RichText;
 
@@ -20,11 +21,19 @@ namespace Myra.Utility
 {
 	internal static class Serialization
 	{
-		public static readonly Dictionary<Type, ITypeSerializer> _serializers = new Dictionary<Type, ITypeSerializer>
+		private static readonly ReadOnlyDictionary<Type, ITypeSerializer> _serializers = new ReadOnlyDictionary<Type, ITypeSerializer>(new Dictionary<Type, ITypeSerializer>
 		{
-			{typeof(Vector2), new Vector2Serializer()},
+			{typeof(Vector2),   new Vector2Serializer()},
 			{typeof(Thickness), new ThicknessSerializer()},
-		};
+		});
+		
+		public static bool TryFindSerializer(Type type, out ITypeSerializer result)
+		{
+			if (type.IsNullablePrimitive())
+				type = type.GetNullableType();
+			
+			return _serializers.TryGetValue(type, out result);
+		}
 
 		public static bool HasDefaultValue(this PropertyInfo property, object value)
 		{

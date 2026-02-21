@@ -11,6 +11,8 @@ using Myra.Graphics2D;
 using FontStashSharp;
 using FontStashSharp.RichText;
 using info.lundin.math;
+using Myra.Graphics2D.UI;
+using Myra.Utility.Types;
 
 #if MONOGAME || FNA
 using Microsoft.Xna.Framework;
@@ -29,9 +31,8 @@ namespace Myra.MML
 		private static string SaveSimpleProperty(BaseObject baseObject, object value, Type propertyType, string propertyName)
 		{
 			string str = null;
-
-			var serializer = FindSerializer(propertyType);
-			if (serializer != null)
+			
+			if (Serialization.TryFindSerializer(propertyType, out var serializer))
 			{
 				str = serializer.Serialize(value);
 			}
@@ -39,8 +40,7 @@ namespace Myra.MML
 			{
 				str = ((Color?)value).Value.ToHexString();
 			}
-			else
-			if (propertyType == typeof(Color))
+			else if (propertyType == typeof(Color))
 			{
 				str = ((Color)value).ToHexString();
 			}
@@ -68,8 +68,26 @@ namespace Myra.MML
 			List<PropertyInfo> complexProperties, simpleProperties;
 			ParseProperties(type, true, out complexProperties, out simpleProperties);
 
-			var el = new XElement(tagName ?? type.Name);
+			bool isGeneric = false;
+			if (tagName == null)
+			{
+				tagName = type.Name;
+				if (type.IsGenericType)
+				{
+					TypeHelper.StripGenericFromString(ref tagName);
+					isGeneric = true;
+				}
+			}
+			
+			XElement el = new XElement(tagName);
 
+			if (isGeneric)
+			{
+				string genericTypeArg = type.GenericTypeArguments[0].Name.Split('.').Last();
+				TypeHelper.NameSwap_DotNetToKeyword(ref genericTypeArg);
+				el.SetAttributeValue(Project.GenericTypeArgName, genericTypeArg);
+			}
+			
 			foreach (var property in simpleProperties)
 			{
 				if (!ShouldSerializeProperty(obj, property))
@@ -139,7 +157,7 @@ namespace Myra.MML
 					var asList = value as IList;
 					if (asList == null)
 					{
-						el.Add(isContent?Save(value):Save(value, false, propertyName));
+						el.Add(isContent ? Save(value) : Save(value, false, propertyName));
 					}
 					else
 					{

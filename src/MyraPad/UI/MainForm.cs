@@ -24,6 +24,7 @@ using System.Collections;
 using System.Collections.ObjectModel;
 using System.Xml.Linq;
 using System.Xml;
+using Myra.Utility.Types;
 
 namespace MyraPad.UI
 {
@@ -1032,7 +1033,9 @@ namespace MyraPad.UI
 							// Remove the <> from the item name, while also appending GenericTypeArg="Type"
 							if (GenericTypesLookup.TryGetValue(menuItem.Text, out var strs))
 							{
-								result += menuItem.Text.Replace("<>", $" {Project.GenericTypeArgName}={quote}{strs[0]}{quote}");
+								string genericType = strs[0];
+								TypeHelper.NameSwap_DotNetToKeyword(ref genericType);
+								result += menuItem.Text.Replace("<>", $" {Project.GenericTypeArgName}={quote}{genericType}{quote}");
 							}
 							skip = result.Length;
 						}
@@ -1283,7 +1286,7 @@ namespace MyraPad.UI
 					{
 						var strings = new List<string>
 						{
-							"Success. Following files had been written:"
+							"Success. The following files were written:"
 						};
 						strings.AddRange(export.Export());
 
@@ -1295,6 +1298,7 @@ namespace MyraPad.UI
 				{
 					var msg = Dialog.CreateMessageBox("Error", ex.Message);
 					msg.ShowModal(Desktop);
+					Console.WriteLine(ex);
 				}
 			};
 		}
@@ -1667,19 +1671,25 @@ namespace MyraPad.UI
 		private void BuildExplorerTreeRecursive(ITreeViewNode node, IItemWithId root)
 		{
 			if (root == null)
-			{
 				return;
+
+			Type type = root.GetType();
+			string label = type.Name;
+			
+			// Display generic class type in the tree
+			if (TypeHelper.MakeFancyGenericTypeName(type, out string newName))
+			{
+				label = newName;
 			}
 
-			var id = root.GetType().Name;
 			if (!string.IsNullOrEmpty(root.Id))
 			{
-				id += $" (#{root.Id})";
+				label += $" (#{root.Id})";
 			}
 
 			var newNode = node.AddSubNode(new Label
 			{
-				Text = id
+				Text = label
 			});
 
 			newNode.Tag = root;

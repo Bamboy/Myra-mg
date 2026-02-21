@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Reflection;
+using Myra.Utility.Types;
 
 namespace Myra.Utility
 {
@@ -78,6 +79,7 @@ namespace Myra.Utility
 				for (int i = 0; i < typeParameters.Length; ++i)
 				{
 					string typeParamName = typeParameters[i].Name;
+					TypeHelper.NameSwap_DotNetToKeyword(ref typeParamName);
 					friendlyName += (i == 0 ? typeParamName : "," + typeParamName);
 				}
 				friendlyName += ">";
