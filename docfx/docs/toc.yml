@@ -6,6 +6,8 @@
   href: MML.md
 - name: MyraPad
   href: MyraPad.md
+- name: MyraViewer
+  href: MyraViewer.md
 - name: Images
   href: images.md
 - name: Fonts
@@ -18,28 +20,36 @@
   href: margin-border-padding.md
 - name: Widget Transformations
   href: widget-transformations.md
+- name: Viewports
+  href: viewports.md
 - name: Grid Layout
   href: grid-layout.md
 - name: StackPanel Layout
   href: stackpanel-layout.md
+- name: WrapPanel
+  href: wrap-panel.md
 - name: Simple Widgets. Label, Button, ToggleButton, RadioButton, CheckButton
   href: simple-widgets-first.md
 - name: Simple Widgets. Part 2. Image, Separator, TextBox
   href: simple-widgets-second.md
 - name: Windows and Dialogs
   href: windows-and-dialogs.md
+- name: Event System
+  href: event-system.md
+- name: MyraEnvironment
+  href: myra-environment.md
 - name: Context Menus
   href: context-menus.md
 - name: PropertyGrid
   href: property-grid.md
+- name: DataGrid
+  href: data-grid.md
 - name: External Assets in MML
   href: external-assets-in-mml.md
 - name: Restyling Through Code
   href: restyling-through-code.md
 - name: Restyling Through XML
   href: restyling-through-xml.md
-- name: Editing Stylesheet Using MyraPad
-  href: editing-stylesheet-using-myrapad.md
 - name: Style Variants
   href: style-variants.md
 - name: TextBox and MonoGame TextInput
@@ -50,3 +60,5 @@
   href: using-myra-in-stride-engine-tutorial.md
 - name: Using platform agnostic version of Myra
   href: using-platform-agnostic-version-of-myra.md
+- name: Samples
+  href: samples.md
